@@ -1,6 +1,7 @@
 from clock import Clock 
 import numpy as np
-
+from queue import Queue
+from task import Task
 # 16 banks
 
 class SharedMem:
@@ -8,9 +9,13 @@ class SharedMem:
         self.bank_num = 16
         self.bank_used = np.zeros([self.bank_num,1],dtype=np.int16)
         self.bank_clock = np.zeros([self.bank_num,1],dtype = int)
-        self.bank_return_cache = np.zeros([self.bank_num,2],dtype = int) # validi & value
-        self.total_size = 256 * 1024 # * 4B = 1MB
-        self.mem = np.zeros([self.total_size/self.bank_num,self.bank_num],dtype=int) 
+        # self.bank_return_cache = [[False,0] for _ in range(self.bank_num) ] # valid & value
+        # self.total_size = total_size # e.g. 256 * 1024 ( * 4B = 1MB)
+        # self.mem = np.zeros([self.total_size/self.bank_num,self.bank_num],dtype=int) 
+        self.mem = []
+        # for i in range(self.bank_num):
+        #     self.mem.append([])
+        self.mem_used = 0
         self.read_latency = read_latency
         self.write_latency = write_latency
 
@@ -20,7 +25,8 @@ class SharedMem:
             return False
         self.bank_used[bank_idx] = 1
         self.bank_clock[bank_idx] = self.read_latency
-        self.bank_return_cache[bank_idx,1] = self.mem[addr / self.bank_num,bank_idx]
+        # if addr < self.mem_used:
+        #     self.bank_return_cache[bank_idx,1] = self.mem[addr / self.bank_num][bank_idx]
         return True
 
     def write_acq(self,addr,value):
@@ -35,13 +41,21 @@ class SharedMem:
         for i in range(self.bank_num):
             self.bank_clock[i] = max(self.bank_clock[i] - 1,0)
             if self.bank_clock[i] == 0:
-                if self.bank_used[i] == 1: # read acquire
-                    self.bank_return_cache[i,0] = 1
+                # if self.bank_used[i] == 1: # read acquire
+                #     self.bank_return_cache[i,0] = 1
                 self.bank_used[i] = 0
+                
+    # def load_data(self,data,length):
+    #     start_ptr = self.mem_used
+    #     for i in range(start_ptr,start_ptr + length):
+    #         self.mem[i/self.bank_num,i%self.bank_num] = data[i - start_ptr]
+    #     self.mem_used += length
+    #     return start_ptr
+
         
-class SRAM：
+class SRAM:
     def __init__(self,read_latency,write_latency,shared_mem):
-        self.capacity = 256 # 256 * 4 B = 1kB, 1 Kb in total
+        # self.capacity = 256 # 256 * 4 B = 1kB, 1 Kb in total
         self.mem = np.zeros([self.capacity,2],dtype=int) # address & value pair
         self.size = 0
         self.read_latency = read_latency
@@ -99,3 +113,46 @@ class SRAM：
             if tmp[0] == 1:
                 self.write(i,tmp[1])
                 self.shared_mem.bank_return_cache[bank_idx,0] = 0
+
+
+class task_queue:
+    def __init__(self,read_latency,write_latency):
+        self.read_latency = read_latency
+        self.write_latency = write_latency
+        self.task_queue = Queue()
+        self.task_num = 0
+        self.read_busy = False
+        self.write_busy = False
+        self.read_clock = 0
+        self.write_clock = 0
+        self.read_cache = 0 # task id
+        self.write_cache = 0 # task id
+
+    def push_task(self,task):
+        if self.write_busy:
+            return False
+        self.write_busty = True
+        sefl.write_cache = task
+        self.write_clock = self.write_latency
+        return True
+
+    def read_task(self):
+        if self.read_busy or self.task_num == 0:
+            return False
+        self.read_busy = True
+        self.read_clock = self.read_latency
+        return True
+
+    def update(self):
+        if self.read_busy:
+            self.read_clock = max(0,self.read_clock - 1)
+            if self.read_clock == 0:
+                self.read_cache = self.task_queue.get()
+                self.read_busy = False
+                self.task_num -= 1
+        if self.write_busy:
+            self.write_clock = max(0,self.write_clock - 1)
+            if self.write_clock == 0:
+                self.task_queue.push(self.write_cache)
+                self.write_busy = False
+                self.task_num += 1
