@@ -34,21 +34,18 @@ class orin_data:
                 task = Task(depth, start_node, size, leaves, leaf_tasks)
                 tasks.append(task)
 
-        return tasks
+        return reorder_indices, tasks
     
-    def __init__(self):
-        self.task = self.read_data("reorder.bin")
-        self.n = 0 # single data are in register of PE. following target_size is the same
-        self.target_size = 0
-        self.nodes = []
-        self.boxes = []
-        self.viewpoint = [] # 3 data in total, same for each node/task so stay in register.following zdir is the same
-        self.zdir = []
-        self.viewmatrix = []
-        self.projmatrix = []
-        self.node_markers = []
-        self.render_indices = []
-        self.parent_indices = []
+    def __init__(self, node_num, target_size, nodes, boxes, viewpoint, render_indices, parent_indices, view_matrix, proj_matrix):
+        self.reorder_indices, self.task = self.read_data("reorder.bin")
+        self.nodes = nodes
+        self.boxes = boxes
+        self.viewpoint = viewpoint
+        self.render_indices = render_indices
+        self.parent_indices = parent_indices
+        self.view_matrix = view_matrix
+        self.proj_matrix = proj_matrix
+        self.node_num = node_num
         
         self.task_size = 0
         # the address of data in v-dram is index * data_size
@@ -64,7 +61,7 @@ class stage:
         self.pe_idx = pe_idx
         self.stage_name = ""
         self.nxt = nxt
-        self.step = 0 # 1 means wait read 2 means computeSize cycle computing 3 means writing back
+        self.step = 0 # 1 means wait read 2 means compute computing 3 means writing back
         self.compute_cycle = compute_cycle
         self.read_list = read_list # read list means data location to read. the order is :task node box
         self.write_list = write_list
@@ -186,12 +183,13 @@ class stage:
 class PE:
     def __init__(self,idx,memory):
         self.idx = idx
-        self.memory = memory
+        self.memory = memory       # consists of node buffer/box buffer/task buffer
         self.busy = False
         self.stage = stage("start",None,0,None,None)
-        self.memory_wait_cycle = 0
-        self.current = False
+        self.memory_wait_cycle = 0 # waiting for memory to fetch data
+        self.current = False       # whther we are fetching data now
         
+    # todo, load data for three types
     def load_data(self):
         pass
     
