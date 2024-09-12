@@ -24,7 +24,7 @@ def start(tasks,n,targte_size,nodes,boxes,viewpoint,zdir,
     task_queue = Queue()
     # init the pe status
     for i in pe_num:
-        pe_list[i].input_task(task[i])
+        pe_list[i].input_task(tasks[i])
 
     while not check_finish():
         for i in pe_num:
