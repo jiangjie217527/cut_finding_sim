@@ -4,18 +4,17 @@ from queue import Queue
 from task import Task
 # 16 banks
 
-class SharedMem:
+class Buffer:
     def __init__(self,read_latency,write_latency):
         self.bank_num = 16
         self.bank_used = np.zeros([self.bank_num,1],dtype=np.int16)
         self.bank_clock = np.zeros([self.bank_num,1],dtype = int)
-        # self.bank_return_cache = [[False,0] for _ in range(self.bank_num) ] # valid & value
-        # self.total_size = total_size # e.g. 256 * 1024 ( * 4B = 1MB)
-        # self.mem = np.zeros([self.total_size/self.bank_num,self.bank_num],dtype=int) 
-        self.mem = []
+        self.total_size = total_size # e.g. 256 * 1024 ( * 4B = 1MB)
+        # self.mem = np.zeros([self.total_size,1],dtype=int) 
+        # self.mem = []
         # for i in range(self.bank_num):
         #     self.mem.append([])
-        self.mem_used = 0
+        # self.mem_used = 0
         self.read_latency = read_latency
         self.write_latency = write_latency
 
@@ -37,13 +36,13 @@ class SharedMem:
         self.bank_clock[bank_idx] = self.write_latency
         return True
     
-    def memory_return_check(self):
-        for i in range(self.bank_num):
-            self.bank_clock[i] = max(self.bank_clock[i] - 1,0)
-            if self.bank_clock[i] == 0:
-                # if self.bank_used[i] == 1: # read acquire
-                #     self.bank_return_cache[i,0] = 1
-                self.bank_used[i] = 0
+    # def memory_return_check(self):
+    #     for i in range(self.bank_num):
+    #         self.bank_clock[i] = max(self.bank_clock[i] - 1,0)
+    #         if self.bank_clock[i] == 0:
+    #             # if self.bank_used[i] == 1: # read acquire
+    #             #     self.bank_return_cache[i,0] = 1
+    #             self.bank_used[i] = 0
                 
     # def load_data(self,data,length):
     #     start_ptr = self.mem_used
