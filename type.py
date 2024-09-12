@@ -20,3 +20,7 @@ class Node:
         self.start_children = start_children
         self.count_children = count_children
 
+class Box:
+    def __init__(self,min,max):
+        self.min = min
+        self.max = max
