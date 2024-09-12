@@ -1,14 +1,42 @@
+from os import read
 from memory import *
 import numpy as np
 from type import *
 from enum import Enum
 import math
+import struct
 
 # stage: load task -> ... -> end task
 
 class orin_data:
+
+    def read_data(self,file_path):
+        with open(file_path, 'rb') as infile:
+            # Read reorder_indices
+            reorder_size = struct.unpack('Q', infile.read(8))[0]  # size_t is typically 8 bytes
+            reorder_indices = struct.unpack(f'{reorder_size}i', infile.read(reorder_size * 4))  # int is typically 4 bytes
+
+            # Read tasks
+            tasks_size = struct.unpack('Q', infile.read(8))[0]
+            tasks = []
+            for _ in range(tasks_size):
+                depth = struct.unpack('i', infile.read(4))[0]
+                start_node = struct.unpack('i', infile.read(4))[0]
+                size = struct.unpack('i', infile.read(4))[0]
+                
+                leaves_size = struct.unpack('i', infile.read(4))[0]
+                leaves = struct.unpack(f'{leaves_size}i', infile.read(leaves_size * 4))
+                
+                leaf_tasks_size = struct.unpack('i', infile.read(4))[0]
+                leaf_tasks = struct.unpack(f'{leaf_tasks_size}i', infile.read(leaf_tasks_size * 4))
+                
+                task = Task(depth, start_node, size, leaves, leaf_tasks)
+                tasks.append(task)
+
+        return tasks
+    
     def __init__(self):
-        self.task = []
+        self.task = self.read_data("reorder.bin")
         self.n = 0 # single data are in register of PE. following target_size is the same
         self.target_size = 0
         self.nodes = []
@@ -28,11 +56,6 @@ class orin_data:
         # if read None, it means not read
         # read_list order: task buffer,nodes boffer boxes buffer
 
-    def read_data(self,filename): # read binary
-            with open(filename,'rb') as file:
-                content = file.read()
-            # ...
-
 
 
 class stage:
@@ -42,8 +65,8 @@ class stage:
         self.nxt = nxt if nxt is not None else []
         self.step = 0 # 1 means wait read 2 means computeSize cycle computing 3 means writing back
         self.compute_cycle = compute_cycle
-        self.read_list = if read_list is not None else [] # read list means data location to read. the order is :task node box
-        self.write_list = if write_list is not None else []
+        self.read_list = read_list if read_list is not None else [] # read list means data location to read. the order is :task node box
+        self.write_list = write_list if write_list is not None else []
         self.box_min = []
         self.box_max = []
         self.viewpoint = []
