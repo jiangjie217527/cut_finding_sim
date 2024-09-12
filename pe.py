@@ -31,13 +31,13 @@ class orin_data:
 
 
 class stage:
-    def __init__(self,stage_name = "",nxt = None,compute_cycle = 0,read_list = None,write_list = None):
+    def __init__(self,pe_idx,stage_name = "",nxt = None,compute_cycle = 0,read_list = None,write_list = None):
+        self.pe_idx = pe_idx
         self.stage_name = ""
-        self.cycle_to_wait = 0
-        self.nxt = nxt if nxt is not None else []
+        self.nxt = nxt
         self.step = 0 # 1 means wait read 2 means computeSize cycle computing 3 means writing back
         self.compute_cycle = compute_cycle
-        self.read_list = if read_list is not None else [] # read list means data location to read. the order is :task node box
+        self.read_list = if read_list is not None else [[None],[]] # read list means data location to read. the order is :task node box
         self.write_list = if write_list is not None else []
         self.box_min = []
         self.box_max = []
@@ -46,26 +46,19 @@ class stage:
         self.task = []
         self.result_stack = [] # stack to store the result computed the stage before
         self.reg_stack = [] # store some data in register
-        self.read_buffer_pointer = 0
-        self.read_num_pointer = 0
+        self.buffer_pointer = 0
+        self.num_pointer = 0
 
-    def get_nxt(self,read_list = None, write_list = None):
+    def get_nxt(self):
         idx = self.get_reg_data("idx",0)
+        new_nxt = []
         if self.stage_name is "start":
-            new_nxt = []
-            if not read_list:
-                print("error, no data get at <get nxt>")
-                exit(0)
-            inbox = True
-            for i in range(3):
-                if not (box_min[i] <= viewpoint[i] <= box_max[i]):
-                    inbox = False
-                    break
+            inbox = self.result_stack[0]
             global nodes_size,buffer_size
             if (node_idx + 1) * 7 % buffer_size > (node_idx) * 7 % buffer_size:
-                new_nxt.append(stage("compute_size",None,compute_cycle = 26 if inbox else 2,read_list = [[None],[None],list(range(node_idx * 7 % buffer_size,(node_idx + 1) * 7 % buffer_size))]),write_list = None) # box size is 7
+                self.nxt = stage(self.pe_idx,"compute_size",None,compute_cycle = 26 if inbox else 2,read_list = [[None],[None],list(range(node_idx * 7 % buffer_size,(node_idx + 1) * 7 % buffer_size))]),write_list = None # box size is 7
             else:
-                new_nxt.append(stage("compute_size",None,compute_cycle = 26 if inbox else 2,read_list = [[None],[None],list(range(0,(node_idx + 1) * 7 % buffer_size)) + list(range(node_idx * 7 % buffer_size,buffer_size))]),write_list = None) # box size is 7
+                self.nxt = stage(self.pe_idx,"compute_size",None,compute_cycle = 26 if inbox else 2,read_list = [[None],[None],list(range(0,(node_idx + 1) * 7 % buffer_size)) + list(range(node_idx * 7 % buffer_size,buffer_size))]),write_list = None # box size is 7
 
 
         if self.stage_name is "compute_size":
@@ -78,36 +71,52 @@ class stage:
             target_size = self.get_reg_data("target_size",0)
         
             if size >= target_size:
-                new_nxt.append(stage("write_back",None,compute_cycle = 1,read_list = None,read_list = [[None],[None],[None]],write_list = [idx]))
+                self.nxt = stage(self.pe_idx,"write_back",None,compute_cycle = 1,read_list = None,read_list = [[None],[None],[None]],write_list = [idx])
             else:
-                new_nxt.append(stage("compare1",None,compute_cycle = 1,read_list = [[None],[self.node_idx * self.nodes_size % buffer_size],[None]]),write_list = [None])
+                self.nxt = stage(self.pe_idx,"compare1",None,compute_cycle = 1,read_list = [[None],[self.node_idx * self.nodes_size % buffer_size],[None]]),write_list = [None]
 
         if self.stage_name is "compare1":
             res = self.result_stack[0]
             if res:
-                new_nxt.append(stage("update_and_write_back",None,compute_cycle = 1,read_list = [[None],[(self.node_idx * self.nodes_size  + 3 )% buffer_size]],[None]),write_list = [idx])
+                self.nxt = stage(self.pe_idx,"update_and_write_back",None,compute_cycle = 1,read_list = [[None],[(self.node_idx * self.nodes_size  + 3 )% buffer_size]],[None]),write_list = [idx]
             else:
-                new_nxt.append(stage("write_back",None,compute_cycle = 0,read_list = None,read_list = [[None],[None],[None]],write_list = [idx]))
+                self.nxt = stage(self.pe_idx,"write_back",None,compute_cycle = 0,read_list = None,read_list = [[None],[None],[None]],write_list = [idx])
 
         if self.stage_name is "write_back" or stage_name is "update_and_write_back":
             if self.get_reg_data("count",0) is 0:
-                new_nxt.append(stage("update_idx",None,compute_cycle = 2,read_list = [[1],[(self.node_idx * self.nodes_size  + 6 )% buffer_size],[None]]),write_list = None)
+                self.nxt = stage(self.pe_idx,"update_idx",None,compute_cycle = 2,read_list = [[1],[(self.node_idx * self.nodes_size  + 6 )% buffer_size],[None]]),write_list = None
             else:
-                new_nxt.append(stage("update_idx",None,compute_cycle = 2,read_list = [[1],[None],[None]]),write_list = None)
+                self.nxt = stage(self.pe_idx,"update_idx",None,compute_cycle = 2,read_list = [[1],[None],[None]]),write_list = None
 
         if self.stage_name is "update_idx":
             res = self.result_stack[0]
             if res: # have task remained is true, go to children or other node
-                new_nxt.append(stage("start",None,compute_cycle = 0,read_list = [[None],[None],[None]]),write_list = None)
+                self.nxt = stage(self.pe_idx,"start",None,compute_cycle = 0,read_list = [[None],[None],[None]]),write_list = None
             else: # no task-- gen new task and end
-                new_nxt.append(stage("commit",None,compute_cycle = 0,read_list = [[3],[None],[None]]),write_list = None)
+                self.nxt = stage(self.pe_idx,"commit",None,compute_cycle = 0,read_list = [[3],[None],[None]]),write_list = None
+
+        if self.stage_name is "commit":
+            return False
+
+        return True
 
     def compute(self): # change status of registers and write result value(tmp value)
-        if self.stage_name is "compute_size":
-            p = 0
+        if self.stage_name is "start":
+            inbox = True
             for i in range(3):
-                p += (max(self.box_min[i],min(self.box_max[i],self.viewpoint[i])) - viewpoint[i]) ** 2
-            self.result_stack[0] = box_min[3]  / math.sqrt(p)
+                if not (box_min[i] <= viewpoint[i] <= box_max[i]):
+                    inbox = False
+                    break
+            self.result_stack[0] = inbox
+        if self.stage_name is "compute_size":
+            if not self.result_stack[0]:
+                self.result_stack[0] = 10000000000
+            else:
+                p = 0
+                for i in range(3):
+                    p += (max(self.box_min[i],min(self.box_max[i],self.viewpoint[i])) - viewpoint[i]) ** 2
+                self.result_stack[0] = box_min[3]  / math.sqrt(p)
+
         if self.stage_name is "compare1":
             self.result_stack[0] = (self.node[0] is not 0)
         if stage_name is "update_and_write_back":
@@ -123,13 +132,13 @@ class stage:
                 self.result_stack[0] = True
             
     def read(self):
-        if self.read_buffer_pointer is 3:
+        if self.buffer_pointer is 3:
             self.step = 2
-            self.read_buffer_pointer = 0
-            self.read_num_pointer = 0
-        else if self.read_num_pointer == len(self.read_list[self.read_buffer_pointer]):
-            self.read_buffer_pointer += 1
-            self.read_num_pointer = 0
+            self.buffer_pointer = 0
+            self.num_pointer = 0
+        else if self.num_pointer == len(self.read_list[self.buffer_pointer]):
+            self.buffer_pointer += 1
+            self.num_pointer = 0
         else if self
 
 
@@ -151,27 +160,61 @@ class PE:
         self.memory = memory
         self.busy = False
         self.stage = stage("start",None,0,None,None)
+        self.memory_wait_cycle = 0
+        self.current = False
         
-        
-
-    def input_task(self,task):
-        self.busy = True
-        self.task = task
-        self.step = PE_step.compute_current_node
-
+    def load_data(self):
+            
+    
     def work(self):
-        work_end = False
-        
-        for _,step in PE_step.__members__.items():
-            if self.step == PE_step.compute_current_node:
-                
-            if self.step == PE_step.get_into_next_node:
+        if self.stage.step == 1:
+            if self.stage.buffer_pointer is 3:
+                self.stage.step = 2
+                self.stage.compute()
+                self.stage.buffer_pointer = 0
+                self.stage.num_pointer = 0
+            else if self.stage.num_pointer == len(self.stage.read_list[self.stage.buffer_pointer]):
+                self.stage.buffer_pointer += 1
+                self.stage.num_pointer = 0
+            else if self.memory_wait_cycle is not 0:
+                self.memory_wait_cycle -= 1
+            else if self.current:
+                self.stage.num_pointer += 1
+                self.current = False
+            else:
+                res = self.memory[self.stage.buffer_pointer].read_acq(self.stage.read_list[self.stage.num_pointer])
+                if res:
+                    self.current = True
+                    self.memory_wait_cycle = self.memory[self.stage.buffer_pointer].read_latency
 
-            if self.step == PE_step.write_back:
+        if self.stage.step is 2:
+            if self.stage.compute_cycle is 0:
+                self.stage.step = 3
+            else:
+                self.stage.compute_cycle -= 1
 
-
-        if work_end:
-            self.busy = False
+        if self.stage.step == 3:
+            if self.stage.buffer_pointer is 3:
+                res = self.stage.get_nxt()
+                if not res:
+                    self.busy = False
+                else:
+                    self.stage = self.stage.nxt
+                self.stage.num_pointer = 0
+                self.stage.buffer_pointer = 0
+            else if self.stage.num_pointer == len(self.stage.write_list[self.stage.buffer_pointer]):
+                self.stage.buffer_pointer += 1
+                self.stage.num_pointer = 0
+            else if self.memory_wait_cycle is not 0:
+                self.memory_wait_cycle -= 1
+            else if self.current:
+                self.stage.num_pointer += 1
+                self.current = False
+            else:
+                res = self.memory[self.stage.buffer_pointer].write_acq(self.stage.write_list[self.stage.num_pointer])
+                if res:
+                    self.current = True
+                    self.memory_wait_cycle = self.memory[self.stage.buffer_pointer].write_latency
 
         
     def update(self):
