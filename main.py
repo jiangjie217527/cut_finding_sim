@@ -32,7 +32,8 @@ def start(node_num, target_size, nodes, boxes, viewpoint, render_indices, parent
             pe_list[i].update()
         cycle += 1
 
-    return count
+    # return the size of render_indices
+    return render_indices.size
 
 def reboot():
     # init the shared memory

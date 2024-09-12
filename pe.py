@@ -190,8 +190,12 @@ class PE:
         self.current = False       # whther we are fetching data now
         
     # todo, load data for three types
-    def load_data(self):
-        pass
+    # return (bool, data_type): whether the data is ready, and the data itself
+    def load_task():
+
+    def load_node():
+
+    def load_box():
     
     def work(self):
         if self.stage.step == 1:
