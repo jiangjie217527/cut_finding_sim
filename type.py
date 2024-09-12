@@ -42,5 +42,3 @@ class Node:
         data[4] = self.count_merged
         data[5] = self.start_children
         data[5] = self.count_children
-
-class `

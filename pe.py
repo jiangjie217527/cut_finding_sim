@@ -9,12 +9,17 @@ import math
 class orin_data:
     def __init__(self):
         self.task = []
-        self.n = 0 # single data are in register of PE. following targte_size is the same
-        self.targte_size = 0
+        self.n = 0 # single data are in register of PE. following target_size is the same
+        self.target_size = 0
         self.nodes = []
         self.boxes = []
         self.viewpoint = [] # 3 data in total, same for each node/task so stay in register.following zdir is the same
         self.zdir = []
+        self.viewmatrix = []
+        self.projmatrix = []
+        self.node_markers = []
+        self.render_indices = []
+        self.parent_indices = []
         
         self.task_size = 0
         # the address of data in v-dram is index * data_size
