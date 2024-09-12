@@ -1,13 +1,13 @@
 from itertools import count
-from memory import SharedMem
+from memory import Buffer
 from clock import Clock
 from pe import PE, orin_data
 from queue import Queue
 
 pe_list = []
 pe_num = 4
-for i in range(4):
-    pe_list.append(PE(i))
+buffer_num = 3
+memory = []
 
 def check_finish():
     for i in pe_num:
@@ -28,18 +28,25 @@ def start(node_num, target_size, nodes, boxes, viewpoint, render_indices, parent
     OrinData = orin_data(node_num=node_num, target_size=target_size, nodes=nodes, boxes=boxes, viewpoint=viewpoint, render_indices=render_indices, parent_indices=parent_indices, view_matrix=view_matrix, proj_matrix=proj_matrix)
 
     while not check_finish():
-        for i in pe_num:
+        for i in range(pe_num):
             pe_list[i].update()
         cycle += 1
+        for i in range(buffer_num):
+            memory[i].memory_return_check()
 
     # return the size of render_indices
     return render_indices.size
 
 def reboot():
     # init the shared memory
-    shared_mem = SharedMem()
+    nodes_buffer = Buffer(10,10,256 * 1024)
+    box_buffer = Buffer(10,10,256 * 1024)
+    task_buffer = Buffer(10,10,256 * 1024 * 2)
+    memory.append(task_buffer)
+    memory.append(nodes_buffer)
+    memory.append(box_buffer)
     # init the clock
     clock = Clock()
     for i in range(4):
-        pe_list.append(PE(i))
+        pe_list.append(PE(i,memory))
     
