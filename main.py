@@ -8,7 +8,6 @@ pe_list = []
 pe_num = 4
 buffer_num = 3
 memory = []
-
 def check_finish():
     for i in pe_num:
         if pe_list[i].busy == True:
@@ -20,16 +19,24 @@ def check_finish():
 
 def start(node_num, target_size, nodes, boxes, viewpoint, render_indices, parent_indices, view_matrix, proj_matrix):
     cycle = 0
-    count = 0
     task_queue = Queue()
-    for i in range(pe_num) :
+    for i in range(pe_num):
         task_queue.put(i)
+        pe_list[i].busy = True
 
     OrinData = orin_data(node_num=node_num, target_size=target_size, nodes=nodes, boxes=boxes, viewpoint=viewpoint, render_indices=render_indices, parent_indices=parent_indices, view_matrix=view_matrix, proj_matrix=proj_matrix)
 
     while not check_finish():
         for i in range(pe_num):
-            pe_list[i].update()
+            if not pe_list[i].data_load:
+                pe_list[i].memory_wait_cycle = 100
+                pe_list[i].data_load = True
+                pe_list[i].load_task(task_queue,OrinData.task)
+                pe_list[i].load_nodes(nodes)
+                pe_list[i].load_box(boxes)
+                pe_list[i].load_register_data(target_size,viewpoint)
+            else:
+                pe_list[i].update()
         cycle += 1
         for i in range(buffer_num):
             memory[i].memory_return_check()
@@ -50,3 +57,7 @@ def reboot():
     for i in range(4):
         pe_list.append(PE(i,memory))
     
+
+if __name__ == "__main__":
+    reboot()
+    start()

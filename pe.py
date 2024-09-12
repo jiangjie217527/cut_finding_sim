@@ -46,6 +46,7 @@ class orin_data:
         self.view_matrix = view_matrix
         self.proj_matrix = proj_matrix
         self.node_num = node_num
+        self.target_size = target_size
         
         self.task_size = 0
         # the address of data in v-dram is index * data_size
@@ -74,9 +75,10 @@ class stage:
         self.node = None
         self.task = None
         self.result_stack = [] # stack to store the result computed the stage before
-        self.reg_stack = [] # store some data in register
         self.buffer_pointer = 0
         self.num_pointer = 0
+        self.render_indices = None
+        self.parent_indices = None
 
     def get_nxt(self):
         node_idx = node_idx
@@ -90,15 +92,16 @@ class stage:
         if self.stage_name is "compute_size":
             size = self.result_stack[0]
             if size >= self.target_size:
-                self.nxt = stage(self.pe_idx,node_idx,"write_back",None,compute_cycle = 1,read_list = None,write_list = [node_idx])
+                self.nxt = stage(self.pe_idx,node_idx,"compare_count_leaf",None,compute_cycle = 1,read_list = None,write_list = [node_idx])
             else:
-                self.nxt = stage(self.pe_idx,node_idx,"write_back",None,compute_cycle = 1,read_list = None,write_list = [None])
-        if self.stage_name is "write_back":
-            if self.count == 0:
+                self.nxt = stage(self.pe_idx,node_idx,"update_idx_and_write_back",None,compute_cycle = 2,read_list = None,write_list = [None])
+        if self.stage_name is "compare_count_leaf":
+            res = self.result_stack[0]
+            if res:
+                self.nxt = stage(self.pe_idx,node_idx,"write_back",None,compute_cycle = 2,read_list = None,write_list = [None])
+            else:
                 self.nxt = stage(self.pe_idx,node_idx,"update_idx",None,compute_cycle = 2,read_list = [[1],[(node_idx * node_idx  + 6 )% buffer_size],[None]],write_list = None)
-            else:
-                self.nxt = stage(self.pe_idx,node_idx,"update_idx",None,compute_cycle = 2,read_list = [[1],[None],[None]],write_list = None)
-        if self.stage_name is "update_idx":
+        if self.stage_name is "write_back" or  self.stage_name is "update_idx" or self.stage_name is "update_idx_and_write_back":
             res = self.result_stack[0]
             if res: # have task remained is true, go to children or other node
                 self.nxt = stage(self.pe_idx,node_idx,"start",None,compute_cycle = 0,read_list = [[None],[None],[None]],write_list = None)
@@ -109,6 +112,10 @@ class stage:
             return False
 
         return True
+
+    def write_back(self):
+        self.render_indices = self.node_idx
+        self.parent_indices = self.node.parent
 
     def compute(self): # change status of registers and write result value(tmp value)
         if self.stage_name is "start":
@@ -127,36 +134,37 @@ class stage:
                 for i in range(3):
                     p += (max(self.box_min[i],min(self.box_max[i], self.viewpoint[i])) - self.viewpoint[i]) ** 2
                 self.result_stack[0] = self.box.min[3]  / math.sqrt(p)
+        if self.stage_name is "compare_count_leaf":
+             self.result_stack[0] = (self.node.count_leafs is not 0)
+        if self.stage_name is "update_idx_and_write_back":
+            self.write_back()
+            self.node_idx = self.node_idx + self.subtree_size
         if self.stage_name is "write_back":
-            size = self.result_stack[0]
-            if size >= self.target_size:
-                self.count = 1
+            self.write_back()
+            self.node_idx += 1
         if self.stage.name is "update_idx":
-            if self.count == 0:
-                self.idx += self.subtree_size
-            else:
-                self.idx += 1
-            if self.idx - self.task.start_node > self.task.size:
-                self.result_stack[0] = False
-            else:
-                self.result_stack[0] = True
+            self.node_idx += 1
 
 
 class PE:
-    def __init__(self,idx,memory):
+    def __init__(self,idx,memory,reorder_indices):
         self.idx = idx
         self.memory = memory       # consists of node buffer/box buffer/task buffer
         self.busy = False
         self.stage = stage(0,0,"start",None,0,None,None)
         self.memory_wait_cycle = 0 # waiting for memory to fetch data
         self.current = False       # whther we are fetching data now
+        self.data_load = False
         self.task = None
+        self.reorder_indices = reorder_indices
+        self.render_indices = []
+        self.parent_indices = []
         
     # todo, load data for three types
     # return (bool, data_type): whether the data is ready, and the data itself
-    def load_task(self,task_queue):
-        task = task_queue.get()
-        return (True,task)
+    def load_task(self,task_queue,tasks):
+        task_id = task_queue.get()
+        return (True,tasks[task_id])
 
     def load_node(self,nodes):
         pe_nodes = []
@@ -192,8 +200,6 @@ class PE:
             elif self.stage.num_pointer == len(self.stage.read_list[self.stage.buffer_pointer]):
                 self.stage.buffer_pointer += 1
                 self.stage.num_pointer = 0
-            elif self.memory_wait_cycle is not 0:
-                self.memory_wait_cycle -= 1
             elif self.current:
                 self.stage.num_pointer += 1
                 self.current = False
@@ -214,6 +220,8 @@ class PE:
                 res = self.stage.get_nxt()
                 if not res:
                     self.busy = False
+                    self.render_indices.append(self.stage.render_indices)
+                    self.parent_indices.append(self.reorder_indices[self.stage.parent_indices])
                 else:
                     self.stage = self.stage.nxt
                 self.stage.num_pointer = 0
@@ -221,8 +229,6 @@ class PE:
             elif self.stage.num_pointer == len(self.stage.write_list[self.stage.buffer_pointer]):
                 self.stage.buffer_pointer += 1
                 self.stage.num_pointer = 0
-            elif self.memory_wait_cycle is not 0:
-                self.memory_wait_cycle -= 1
             elif self.current:
                 self.stage.num_pointer += 1
                 self.current = False
@@ -235,4 +241,7 @@ class PE:
         
     def update(self):
         if self.busy:
-            self.work()
+            if self.memory_wait_cycle:
+                self.memory_wait_cycle -= 1
+            else:
+                self.work()

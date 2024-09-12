@@ -27,7 +27,7 @@ class Buffer:
         #     self.bank_return_cache[bank_idx,1] = self.mem[addr / self.bank_num][bank_idx]
         return True
 
-    def write_acq(self,addr,value):
+    def write_acq(self,addr):
         bank_idx = addr % self.bank_num
         if self.bank_used[bank_idx] != 0:
             return False
