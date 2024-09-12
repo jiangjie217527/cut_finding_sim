@@ -42,8 +42,8 @@ class stage:
         self.nxt = nxt
         self.step = 0 # 1 means wait read 2 means computeSize cycle computing 3 means writing back
         self.compute_cycle = compute_cycle
-        self.read_list = if read_list is not None else [[None],[]] # read list means data location to read. the order is :task node box
-        self.write_list = if write_list is not None else []
+        self.read_list = read_list # read list means data location to read. the order is :task node box
+        self.write_list = write_list
         self.box_min = []
         self.box_max = []
         self.viewpoint = []
