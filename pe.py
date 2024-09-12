@@ -111,7 +111,7 @@ class stage:
             else:
                 self.nxt = stage(self.pe_idx,"write_back",None,compute_cycle = 0,read_list = None,read_list = [[None],[None],[None]],write_list = [idx])
 
-        if self.stage_name is "write_back" or stage_name is "update_and_write_back":
+        if self.stage_name is "write_back" or self.stage_name is "update_and_write_back":
             if self.get_reg_data("count",0) is 0:
                 self.nxt = stage(self.pe_idx,"update_idx",None,compute_cycle = 2,read_list = [[1],[(self.node_idx * self.nodes_size  + 6 )% buffer_size],[None]]),write_list = None
             else:
@@ -133,7 +133,7 @@ class stage:
         if self.stage_name is "start":
             inbox = True
             for i in range(3):
-                if not (box_min[i] <= viewpoint[i] <= box_max[i]):
+                if not (self.box_min[i] <= self.viewpoint[i] <= self.box_max[i]):
                     inbox = False
                     break
             self.result_stack[0] = inbox
@@ -143,12 +143,12 @@ class stage:
             else:
                 p = 0
                 for i in range(3):
-                    p += (max(self.box_min[i],min(self.box_max[i],self.viewpoint[i])) - viewpoint[i]) ** 2
-                self.result_stack[0] = box_min[3]  / math.sqrt(p)
+                    p += (max(self.box_min[i],min(self.box_max[i], self.viewpoint[i])) - self.viewpoint[i]) ** 2
+                self.result_stack[0] = self.box_min[3]  / math.sqrt(p)
 
         if self.stage_name is "compare1":
             self.result_stack[0] = (self.node[0] is not 0)
-        if stage_name is "update_and_write_back":
+        if self.stage_name is "update_and_write_back":
             self.reg_stack[5] += self.node[4]
         if stage.name is "update_idx":
             if self.result_stack[0] is 0:
@@ -165,10 +165,10 @@ class stage:
             self.step = 2
             self.buffer_pointer = 0
             self.num_pointer = 0
-        else if self.num_pointer == len(self.read_list[self.buffer_pointer]):
+        elif self.num_pointer == len(self.read_list[self.buffer_pointer]):
             self.buffer_pointer += 1
             self.num_pointer = 0
-        else if self
+        elif self
 
 
 
@@ -202,12 +202,12 @@ class PE:
                 self.stage.compute()
                 self.stage.buffer_pointer = 0
                 self.stage.num_pointer = 0
-            else if self.stage.num_pointer == len(self.stage.read_list[self.stage.buffer_pointer]):
+            elif self.stage.num_pointer == len(self.stage.read_list[self.stage.buffer_pointer]):
                 self.stage.buffer_pointer += 1
                 self.stage.num_pointer = 0
-            else if self.memory_wait_cycle is not 0:
+            elif self.memory_wait_cycle is not 0:
                 self.memory_wait_cycle -= 1
-            else if self.current:
+            elif self.current:
                 self.stage.num_pointer += 1
                 self.current = False
             else:
@@ -231,12 +231,12 @@ class PE:
                     self.stage = self.stage.nxt
                 self.stage.num_pointer = 0
                 self.stage.buffer_pointer = 0
-            else if self.stage.num_pointer == len(self.stage.write_list[self.stage.buffer_pointer]):
+            elif self.stage.num_pointer == len(self.stage.write_list[self.stage.buffer_pointer]):
                 self.stage.buffer_pointer += 1
                 self.stage.num_pointer = 0
-            else if self.memory_wait_cycle is not 0:
+            elif self.memory_wait_cycle is not 0:
                 self.memory_wait_cycle -= 1
-            else if self.current:
+            elif self.current:
                 self.stage.num_pointer += 1
                 self.current = False
             else:

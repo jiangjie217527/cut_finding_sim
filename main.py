@@ -31,3 +31,14 @@ def start(tasks,n,targte_size,nodes,boxes,viewpoint,zdir,
             pe_list[i].update()
         cycle += 1
 
+def reboot():
+    # init the shared memory
+    shared_mem = SharedMem()
+    # init the clock
+    clock = Clock()
+    for i in range(4):
+        pe_list.append(PE(i))
+    # init the task queue
+    task_queue = Queue()
+    # 
+    
