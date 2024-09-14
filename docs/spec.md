@@ -30,26 +30,24 @@ Index: task_id, $4$ bytes
     - make inbox/frustum check and size computing(projection unit) in **parellel**(like shortcut eval)
     - compare size with `target_size`
         - if **bigger and not the leaf of the hierarchy**: `cur_id += cur_node.subtree_size`, if this is a **leaf node of the subtree** (`subtree_size == 1`), append `cur_id` to the array of **selected leaves**
-        - if **smaller or the leaf of the hierarchy**: `cur_id += 1`, append `cur_id` to the array of **selected cut**
-5. after the loop, write the **selected cut/leaves** back to the **commit buffer** 
+        - if **smaller or the leaf of the hierarchy**: `cur_id += 1`, append `cur_id` to the result array of **selected cut**
+5. after the loop, write the finished `task_id` to the commit buffer
 
-In brief, we can break the process of step 4 (dealing with single node) into **three stages**
-- fetching nodes/box data
-- compute size
-- compare and commit
+The full process of dealing a node consists of about 12 cycles, and can be divided to **no less than 10** stages of pipelining.
 
 ### 2.3 Commit Buffer
 
-commit buffer contains two arrays, one filled with `cut_node`, and the other with the pair `<task_id, leaf_node>`
+commit buffer contains one array filled with the pair `<task_id, leaf_node>`; and another containing the currently done tasks
 
 ### 2.4 Scheduler
 
-Scheduler deals with these two arrays in parellel
+The scheduler has to the deal with the commit buffer in this way:
 
-- as for `cut_nodes`, check for incoming nodes and put them in result
 - as for `leaf_nodes`
-    - call the data cache to replace `task_id` with the id that this `leaf_node` would invoke
-    - put these new ids into `task_queue`
+    - look in the cache to search for all the associated subtasks for this leaf node
+    - put their `task_id` in the `waitlist`
+    - if a task is finished, **invalidate it**
+    - if there's a task finished, put the first task in the waiting queue into the cache (ask for DRAM), and fill it into `task_queue` once the DRAM has finished.
 
 ## Discussion of details
 
