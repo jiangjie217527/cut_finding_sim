@@ -17,8 +17,12 @@ struct Task {
 };
 
 struct Box {
-    std::vector<int> minn{0, 0, 0, 0};
-    std::vector<int> maxx{0, 0, 0, 0};
+    std::vector<float> minn{0, 0, 0, 0};
+    std::vector<float> maxx{0, 0, 0, 0};
 };
+
+using float4 = std::vector<float>;
+using float3 = std::vector<float>;
+using Point  = std::vector<float>;
 
 #endif

@@ -16,8 +16,8 @@ struct InnerTask {
     int offset;    // offset of its working period
     bool busy = false;
 
-    std::vector<std::pair<int, int>> cuts_to_submit;
-    std::vector<std::pair<int, int>> leaves_to_submit;
+    std::queue<std::pair<int, int>> cuts_to_submit;
+    std::queue<std::pair<int, int>> leaves_to_submit;
 
     InnerTask(int offset = -1, int inner_id = -1);
     bool updateTick(std::queue<int> &task_queue, DCache &dcache);
