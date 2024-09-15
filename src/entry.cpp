@@ -1,13 +1,24 @@
 #include "common.hpp"
+#include "DCache.hpp"
+#include "DRAM.hpp"
 #include "pe.hpp"
+#include "scheduler.hpp"
 #include "types.hpp"
 
 #include <cstdio>
 #include <queue>
 #include <vector>
 
-void initStage() {
+Scheduler scheduler;
+DRAM dram;
+DCache dcache;
 
+std::vector<Task> tasks;
+std::vector<Node> nodes;
+std::vector<Box> boxes;
+
+void initStage() {
+    // todo: load data from binary files
 }
 
 void callAccelerator(float target_size, 
@@ -27,16 +38,17 @@ void callAccelerator(float target_size,
         pes[i].loadMeta(target_size, viewpoint, view_matrix, proj_matrix);
     }
 
-    std::queue<int> task_queue;
+    scheduler.task_queue.push(0);
+    
 
     while (true) {
         cycle++;
         bool working = false;
         for (int i = 0; i < PENum; ++i) {
-            working |= pes[i].updateTick();
+            working |= pes[i].updateTick(scheduler.task_queue, dcache);
         }
 
-        if (!working && task_queue.empty()) {
+        if (!working && scheduler.task_queue.empty()) {
             break;
         }
     }
