@@ -19,6 +19,7 @@ std::vector<Box> boxes;
 
 void initStage() {
     // todo: load data from binary files
+    dram.init(nodes, tasks, boxes);
 }
 
 void callAccelerator(float target_size, 
@@ -45,8 +46,10 @@ void callAccelerator(float target_size,
         cycle++;
         bool working = false;
         for (int i = 0; i < PENum; ++i) {
-            working |= pes[i].updateTick(scheduler.task_queue, dcache);
+            working |= pes[i].updateTick(scheduler.task_queue, dcache, scheduler);
         }
+
+        working |= scheduler.schedule(dcache);
 
         if (!working && scheduler.task_queue.empty()) {
             break;

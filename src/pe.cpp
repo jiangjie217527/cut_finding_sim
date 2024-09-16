@@ -13,16 +13,16 @@ PE::PE(std::vector<int>& render_indices,
     }
 }
 
-bool PE::updateTick(std::queue<int> &task_queue, DCache &dcache) {
+bool PE::updateTick(std::queue<int> &task_queue, DCache &dcache, Scheduler &scheduler) {
     bool res = false;
     for (int i = 0; i < PipelineStage; ++i) {
-        res |= inner_tasks[i].updateTick(task_queue, dcache);
+        res |= inner_tasks[i].updateTick(task_queue, dcache, scheduler);
     }
 
     return res;
 }
 
-bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache) {
+bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Scheduler &scheduler) {
     this->cycle++;
     
     if (!busy) {
@@ -69,7 +69,7 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache) {
                 this->cuts_to_submit.push({dealt_points * PipelineStage, cur_id});
                 this->parents_to_submit.push(nodes[id].parent_id);
             } else if (nodes[id].subtree_size == 1) {
-                this->leaves_to_submit.push({dealt_points * PipelineStage, cur_id});
+                this->leaves_to_submit.push({dealt_points * PipelineStage, cur_id, cur_id + nodes[id].subtree_size < cur_task.start_id + cur_task.task_size});
             }
                 
             if (selected || !in_fr) {
@@ -101,19 +101,27 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache) {
 
             if (!this->leaves_to_submit.empty()) {
                 auto leaf = this->leaves_to_submit.front();
-                if (this->counter == leaf.first) {
+                int time_stamp = std::get<0>(leaf);
+                int leaf_id = std::get<1>(leaf);
+                bool is_end = std::get<2>(leaf);
+
+                if (this->counter >= time_stamp && scheduler.leaf_to_submit.size() < MaxLeafBufferSize) {
                     this->leaves_to_submit.pop();
                     
                     // submit leaf_id to scheduler
+                    scheduler.leaf_to_submit.push({this->cycle, leaf_id, is_end});
                 }
             }
         }
 
-        if (this->counter == this->cur_time) {
+        if (this->counter == this->cur_time && this->cuts_to_submit.empty() && this->leaves_to_submit.empty()) {
+            scheduler.tasks_to_submit.push({this->cycle, this->cur_id});
+
             this->busy = false;
             this->cur_time = 0;
             this->counter = 0;
             this->cur_id = this->inner_id = -1;
+
             return false;
         }
             
