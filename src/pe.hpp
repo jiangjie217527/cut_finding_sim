@@ -6,9 +6,11 @@
 #include "types.hpp"
 #include <queue>
 
+struct PE;
+
 struct InnerTask {
     int cycle = 0; // the global cycle
-    int inner_id;  // the id of the inner task
+    int inner_id = -1;  // the id of the inner task
     Task cur_task; // the current task it's dealing with
     int cur_id;    // the current node it's dealing with
     int cur_time;  // calculate the time to finish this task
@@ -16,10 +18,13 @@ struct InnerTask {
     int offset;    // offset of its working period
     bool busy = false;
 
+    PE* parent_pe;
+
     std::queue<std::pair<int, int>> cuts_to_submit;
+    std::queue<int> parents_to_submit;
     std::queue<std::pair<int, int>> leaves_to_submit;
 
-    InnerTask(int offset = -1, int inner_id = -1);
+    InnerTask(int offset = -1, int inner_id = -1, PE* parent_pe = nullptr);
     bool updateTick(std::queue<int> &task_queue, DCache &dcache);
 };
 

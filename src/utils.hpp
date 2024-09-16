@@ -5,7 +5,7 @@
 
 float pointboxdist(const Box &box, const Point &viewpoint);
 bool inbox(const Box &box, const Point &viewpoint);
-float computeSize(const Box &box, const Point &viewpoint, const Point &zdir);
+float computeSize(const Box &box, const Point &viewpoint);
 
 float4 transformPoint4x4(const float3& p, const float* matrix);
 float3 transformPoint4x3(const float3& p, const float* matrix);

@@ -28,7 +28,7 @@ float pointboxdist(const Box &box, const Point &viewpoint) {
     return std::sqrt(diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2]);
 }
 
-float computeSize(const Box &box, const Point &viewpoint, const Point &zdir) {
+float computeSize(const Box &box, const Point &viewpoint) {
     if (inbox(box, viewpoint)) {
         return __FLT_MAX__;
     }
