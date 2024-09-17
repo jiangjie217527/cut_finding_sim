@@ -7,6 +7,7 @@ bool Scheduler::schedule(DCache &dcache, DRAM &dram) {
     cycle++;
 
     dcache.loadBufferCache();
+    
 
     if (leaf_to_submit.empty() && tasks_to_submit.empty() && task_queue.empty()) {
         return false;
@@ -50,8 +51,14 @@ bool Scheduler::schedule(DCache &dcache, DRAM &dram) {
     if (!tasks_waitlist.empty()) {
         result = true;
         int task_id = tasks_waitlist.front();
-
+        if (dcache.cacheLoadData(task_id, dram)) {
+            tasks_waitlist.pop();
+        } else if (dcache.bufferCacheLoadData(task_id, dram)) {
+            tasks_waitlist.pop();
+        }
     }
+
+    
 
     return result;
 }

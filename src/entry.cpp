@@ -44,7 +44,7 @@ void callAccelerator(float target_size,
 
     while (true) {
         cycle++;
-        dcache.update();
+        scheduler.tasks_loaded_to_cache = dcache.update();
 
         bool working = false;
         for (int i = 0; i < PENum; ++i) {

@@ -17,6 +17,7 @@ struct Scheduler {
     std::queue<std::pair<int, int>> tasks_to_submit;
     std::unordered_set<int> if_leaves_submitted;
     std::queue<int> tasks_waitlist;
+    std::vector<int> tasks_loaded_to_cache;
 
     bool schedule(DCache &dcache, DRAM &dram);
 };

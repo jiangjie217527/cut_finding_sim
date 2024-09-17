@@ -17,6 +17,7 @@ struct Bank {
     CacheData data[BankSize];
     bool valid[BankSize] = {false   }; // valid means whether the data has been fully transmitted
     bool occupied[BankSize] = {false}; // occupied means whether the data is being read
+    int dram_counter[BankSize] = {0}; // time remaining to finish reading from dram
     int tag[BankSize];
     bool busy = false;
     int busy_id = -1;
@@ -37,8 +38,9 @@ struct DCache {
 
     bool readData(int task_id, Task &task, std::vector<Node> &nodes, std::vector<Box> &boxes);
     bool readSubtask(int task_id, std::vector<int> &leaves, std::vector<int> &leaf_task_ids);
-    bool loadData(int task_id, const DRAM &dram);
-    void update();
+    bool cacheLoadData(int task_id, const DRAM &dram);
+    bool bufferCacheLoadData(int task_id, const DRAM &dram);
+    std::vector<int> update();
     int invalidate(int task_id);
     void loadBufferCache();
 };
