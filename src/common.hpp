@@ -14,9 +14,10 @@ constexpr int BankSize = (TaskQueueSize + PENum) / BankNum;
 constexpr int PortWordsPerCycle = 4;
 constexpr int PortNum = 4;
 constexpr int CacheWordsPerCycle = PortWordsPerCycle * PortNum;
+constexpr int BufferCacheSize = 2;
+
 // for Task
 constexpr int MaxTaskSize = 32;
 // for Scheduler
 constexpr int MaxLeafBufferSize = 32;
-
 #endif // HGS_COMMON_HPP_

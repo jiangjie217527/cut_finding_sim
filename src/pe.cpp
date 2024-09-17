@@ -109,7 +109,7 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
                     this->leaves_to_submit.pop();
                     
                     // submit leaf_id to scheduler
-                    scheduler.leaf_to_submit.push({this->cycle, leaf_id, is_end});
+                    scheduler.leaf_to_submit.push({this->inner_id, this->cycle, leaf_id, is_end});
                 }
             }
         }

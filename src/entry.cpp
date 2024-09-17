@@ -44,6 +44,8 @@ void callAccelerator(float target_size,
 
     while (true) {
         cycle++;
+        dcache.update();
+
         bool working = false;
         for (int i = 0; i < PENum; ++i) {
             working |= pes[i].updateTick(scheduler.task_queue, dcache, scheduler);
