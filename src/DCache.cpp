@@ -1,5 +1,6 @@
 #include "DCache.hpp"
 #include "common.hpp"
+#include <cassert>
 
 int divUpperBound(int a, int b) {
     return (a + b - 1) / b;
@@ -50,7 +51,7 @@ bool DCache::readSubtask(int task_id, std::vector<int> &leaves, std::vector<int>
     return false;
 }
 
-void DCache::loadData(int task_id, const DRAM &dram) {
+bool DCache::loadData(int task_id, const DRAM &dram) {
     int bank_id = task_id % BankNum;
     
     for (int i = 0; i < BankSize; ++i) {
@@ -62,9 +63,12 @@ void DCache::loadData(int task_id, const DRAM &dram) {
             banks[bank_id].data[i].node[j] = nodes[j];
             banks[bank_id].data[i].box[j] = boxes[j];
         }
-        banks[bank_id].valid[i] = true;
-        return;
+        banks[bank_id].valid[i] = false;
+        banks[bank_id].occupied[i] = true;
+        return true;
     }
+
+    return false;
 }
 
 void DCache::update() {
@@ -72,7 +76,53 @@ void DCache::update() {
         if (banks[i].busy) {
             banks[i].counter--;
             if (banks[i].counter == 0) {
+                // finish transferring data
                 banks[i].busy = false;
+                if (banks[i].busy_id != -1) {
+                    banks[i].valid[banks[i].busy_id] = true;
+                    banks[i].occupied[banks[i].busy_id] = false;
+                }
+            }
+        }
+    }
+}
+
+int DCache::invalidate(int task_id) {
+    int bank_id = task_id % BankNum;
+    
+    for (int i = 0; i < BankSize; ++i) {
+        if (banks[bank_id].tag[i] == task_id && banks[bank_id].valid[i]) {
+            banks[bank_id].valid[i] = false;
+            return i;
+        }
+    }
+
+    assert(false);
+}
+
+void DCache::loadBufferCache() {
+    for (int i = 0; i < BufferCacheSize; ++i) {
+        if (!buffer_cache.valid[i]) {
+            continue;
+        }
+
+        int bank_id = buffer_cache.tag[i] % BankNum;
+        if (banks[bank_id].busy) {
+            continue;
+        }
+
+        // now we're sure that the bank isn't busy, can fill the data
+        for (int j = 0; j < BankSize; ++j) {
+            if (!banks[bank_id].valid[j] && !banks[bank_id].occupied[j]) {
+                banks[bank_id].tag[j] = buffer_cache.tag[i];
+                banks[bank_id].data[j] = buffer_cache.data[i];
+                banks[bank_id].occupied[j] = true;
+                banks[bank_id].busy = true;
+                banks[bank_id].busy_id = j;
+                banks[bank_id].counter = divUpperBound(SizeOfCacheData, CacheWordsPerCycle);
+                buffer_cache.valid[i] = false;
+                buffer_cache.busy[i] = false;
+                break;
             }
         }
     }

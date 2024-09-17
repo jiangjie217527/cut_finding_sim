@@ -51,7 +51,7 @@ void callAccelerator(float target_size,
             working |= pes[i].updateTick(scheduler.task_queue, dcache, scheduler);
         }
 
-        working |= scheduler.schedule(dcache);
+        working |= scheduler.schedule(dcache, dram);
 
         if (!working && scheduler.task_queue.empty()) {
             break;

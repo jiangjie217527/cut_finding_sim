@@ -3,6 +3,7 @@
 
 #include "common.hpp"
 #include "DCache.hpp"
+#include "DRAM.hpp"
 #include "types.hpp"
 
 #include <queue>
@@ -17,7 +18,7 @@ struct Scheduler {
     std::unordered_set<int> if_leaves_submitted;
     std::queue<int> tasks_waitlist;
 
-    bool schedule(DCache &dcache);
+    bool schedule(DCache &dcache, DRAM &dram);
 };
 
 #endif // HGS_SCHEDULER_HPP_

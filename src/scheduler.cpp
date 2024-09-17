@@ -1,10 +1,13 @@
 #include "scheduler.hpp"
 #include "pe.hpp"
 
-bool Scheduler::schedule(DCache &dcache) {
+bool Scheduler::schedule(DCache &dcache, DRAM &dram) {
     bool result = false;
 
     cycle++;
+
+    dcache.loadBufferCache();
+
     if (leaf_to_submit.empty() && tasks_to_submit.empty() && task_queue.empty()) {
         return false;
     }
@@ -31,14 +34,24 @@ bool Scheduler::schedule(DCache &dcache) {
                 }
             }
         }
+    }
 
-        if (!tasks_to_submit.empty()) {
-            int time_stamp = tasks_to_submit.front().first;
-            int task_id = tasks_to_submit.front().second;
+    if (!tasks_to_submit.empty()) {
+        result = true;
+        int time_stamp = tasks_to_submit.front().first;
+        int task_id = tasks_to_submit.front().second;
 
-            if (time_stamp <= cycle) {
-                
-            }
+        if (time_stamp <= cycle && if_leaves_submitted.find(task_id) != if_leaves_submitted.end()) {
+            // can kick the task out of DCache
+            int pos = dcache.invalidate(task_id);
         }
     }
+
+    if (!tasks_waitlist.empty()) {
+        result = true;
+        int task_id = tasks_waitlist.front();
+
+    }
+
+    return result;
 }
