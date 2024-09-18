@@ -1,13 +1,4 @@
-#include "common.hpp"
-#include "DCache.hpp"
-#include "DRAM.hpp"
-#include "pe.hpp"
-#include "scheduler.hpp"
-#include "types.hpp"
-
-#include <cstdio>
-#include <queue>
-#include <vector>
+#include "entry.hpp"
 
 Scheduler scheduler;
 DRAM dram;
