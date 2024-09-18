@@ -1,0 +1,4 @@
+# ninja log v5
+0	1089	1726644633260715568	/media/gaussian/ext/gs/hierarchical-3d-gaussians/cut_finding_sim/build/temp.linux-aarch64-3.10/src/entry.o	7495ba5497b3fa79
+0	40678	1726644672792503198	/media/gaussian/ext/gs/hierarchical-3d-gaussians/cut_finding_sim/build/temp.linux-aarch64-3.10/torch/torch_interface.o	ef7a744a85193683
+0	40915	1726644673020501966	/media/gaussian/ext/gs/hierarchical-3d-gaussians/cut_finding_sim/build/temp.linux-aarch64-3.10/ext.o	10c42c4e79858acf

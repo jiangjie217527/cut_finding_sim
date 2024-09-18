@@ -1,5 +1,5 @@
 #pragma once
-#include <torch/extensions.h>
+#include <torch/extension.h>
 #include <cstdio>
 #include <tuple>
 #include <string>

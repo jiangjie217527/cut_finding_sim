@@ -13,12 +13,13 @@ void initStage() {
     dram.init(nodes, tasks, boxes);
 }
 
-void callAccelerator(float target_size, 
+int callAccelerator(float target_size, 
                      float* viewpoint,
-                     std::vector<int>& render_indices,
-                     std::vector<int>& parent_indices,
+                     int* renderIndices,
+                     int* parentIndices,
                      const float* view_matrix,
                      const float* proj_matrix) {
+    std::vector<int> render_indices, parent_indices;
     int cycle = 0;
     PE pes[PENum] = {
         PE(render_indices, parent_indices),
@@ -49,6 +50,11 @@ void callAccelerator(float target_size,
         }
     }
 
+    for (int i = 0; i < render_indices.size(); ++i) {
+        renderIndices[i] = render_indices[i];
+        parentIndices[i] = parent_indices[i];
+    }
+
     printf("Total cycles: %d\n", cycle);
-    return;
+    return render_indices.size();
 }

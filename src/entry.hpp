@@ -11,10 +11,10 @@
 
 void initStage();
 
-void callAccelerator(float target_size,
+int callAccelerator(float target_size,
                      float* viewpoint,
-                     std::vector<int>& render_indices,
-                     std::vector<int>& parent_indices,
+                     int* render_indices,
+                     int* parent_indices,
                      const float* view_matrix,
                      const float* proj_matrix);
 
