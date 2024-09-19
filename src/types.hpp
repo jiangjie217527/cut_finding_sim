@@ -2,6 +2,7 @@
 #define HGS_TYPES_HPP_
 
 #include <vector>
+#include <fstream>
 
 struct Node {
     int parent_id;
@@ -15,7 +16,7 @@ struct Task {
     std::vector<int> leaves;
     std::vector<int> leaf_task_ids;
 
-    std::ifstream& operator>>(std::ifstream& ifs, Task& task) {
+    friend std::ifstream& operator>>(std::ifstream& ifs, Task& task) {
     ifs.read(reinterpret_cast<char*>(&task.start_id), sizeof(task.start_id));
     ifs.read(reinterpret_cast<char*>(&task.task_size), sizeof(task.task_size));
 

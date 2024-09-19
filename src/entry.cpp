@@ -80,7 +80,7 @@ int callAccelerator(float target_size,
     }
 
     scheduler.task_queue.push(0);
-    
+    dcache.cacheLoadData(0, dram);    
 
     while (true) {
         cycle++;
