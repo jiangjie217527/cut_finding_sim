@@ -130,3 +130,13 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
 
     return false;
 }
+
+void PE::loadMeta(float target_size, 
+              float* viewpoint,
+              const float* view_matrix,
+              const float* proj_matrix) {
+    this->target_size = target_size;
+    this->viewpoint = viewpoint;
+    this->view_matrix = view_matrix;
+    this->proj_matrix = proj_matrix;
+}
