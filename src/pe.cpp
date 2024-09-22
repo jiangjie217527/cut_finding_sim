@@ -14,6 +14,7 @@ PE::PE(std::vector<int>& render_indices,
 }
 
 bool PE::updateTick(std::queue<int> &task_queue, DCache &dcache, Scheduler &scheduler) {
+    printf("[PE]: updateTick\n");
     bool res = false;
     for (int i = 0; i < PipelineStage; ++i) {
         res |= inner_tasks[i].updateTick(task_queue, dcache, scheduler);
@@ -23,6 +24,7 @@ bool PE::updateTick(std::queue<int> &task_queue, DCache &dcache, Scheduler &sche
 }
 
 bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Scheduler &scheduler) {
+    printf("[debug]: cycle = %d, offset = %d\n", cycle, offset);
     this->cycle++;
     
     if (!busy) {
@@ -53,9 +55,11 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
         this->cur_id = cur_task.start_id;
 
         int dealt_points = 0;
+
+        printf("[INFO] PE %d: start_id = %d, task_size = %d\n", this->inner_id, cur_task.start_id, cur_task.task_size);
             
         while (cur_id <= cur_task.start_id + cur_task.task_size && cur_id >= cur_task.start_id) {
-            // todo judgement process
+
             dealt_points++;
 
             int id = cur_id - cur_task.start_id;
@@ -66,10 +70,10 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
 
             if (size < this->parent_pe->target_size || nodes[id].count_leaf) {
                 selected = true;
-                this->cuts_to_submit.push({dealt_points * PipelineStage, cur_id});
+                this->cuts_to_submit.emplace(dealt_points * PipelineStage, cur_id);
                 this->parents_to_submit.push(nodes[id].parent_id);
             } else if (nodes[id].subtree_size == 1) {
-                this->leaves_to_submit.push({dealt_points * PipelineStage, cur_id, cur_id + nodes[id].subtree_size < cur_task.start_id + cur_task.task_size});
+                this->leaves_to_submit.emplace(dealt_points * PipelineStage, cur_id, cur_id + nodes[id].subtree_size < cur_task.start_id + cur_task.task_size);
             }
                 
             if (selected || !in_fr) {
@@ -109,13 +113,13 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
                     this->leaves_to_submit.pop();
                     
                     // submit leaf_id to scheduler
-                    scheduler.leaf_to_submit.push({this->inner_id, this->cycle, leaf_id, is_end});
+                    scheduler.leaf_to_submit.emplace(this->inner_id, this->cycle, leaf_id, is_end);
                 }
             }
         }
 
-        if (this->counter == this->cur_time && this->cuts_to_submit.empty() && this->leaves_to_submit.empty()) {
-            scheduler.tasks_to_submit.push({this->cycle, this->cur_id});
+        if (this->counter >= this->cur_time && this->cuts_to_submit.empty() && this->leaves_to_submit.empty()) {
+            scheduler.tasks_to_submit.emplace(this->cycle, this->cur_id);
 
             this->busy = false;
             this->cur_time = 0;

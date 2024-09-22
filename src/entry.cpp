@@ -1,8 +1,13 @@
 #include "entry.hpp"
+#include <cstdio>
+#include <iostream>
 
 Scheduler scheduler;
 DRAM dram;
 DCache dcache;
+
+constexpr int maxn = 3e6;
+int renderIndices[maxn], parentIndices[maxn];
 
 std::vector<Task> tasks;
 std::vector<Node> nodes;
@@ -11,25 +16,33 @@ std::vector<int> reorder_indices;
 std::vector<int> reversed_indices;
 
 void initStage() {
-    // todo: load data from binary files
-    std::ifstream infile("reorder.bin", std::ios::binary);
+    std::ifstream infile("reorder copy.bin", std::ios::binary);
     if (!infile.is_open()) {
         printf("Error: cannot open reorder.bin\n");
         exit(1);
     }
 
+    printf("Loading reorder.bin\n");
+
     size_t reorder_size;
     infile.read(reinterpret_cast<char*>(&reorder_size), sizeof(reorder_size));
     reorder_indices.resize(reorder_size);
     infile.read(reinterpret_cast<char*>(reorder_indices.data()), reorder_size * sizeof(int));
+
+    printf("[INFO] reorder_size: %ld\n", reorder_size);
     
     size_t reversed_size;
     infile.read(reinterpret_cast<char*>(&reversed_size), sizeof(reversed_size));
     reversed_indices.resize(reversed_size);
     infile.read(reinterpret_cast<char*>(reversed_indices.data()), reversed_size * sizeof(int));
 
+    printf("[INFO] reversed_size: %ld\n", reversed_size);
+
     size_t tasks_size;
     infile.read(reinterpret_cast<char*>(&tasks_size), sizeof(tasks_size));
+
+    printf("[INFO] tasks_size: %ld\n", tasks_size);
+
     tasks.resize(tasks_size);
     for (int i = 0; i < tasks_size; ++i) {
         infile >> tasks[i];
@@ -66,6 +79,8 @@ int callAccelerator(float target_size,
                      const float* view_matrix,
                      const float* proj_matrix) {
     initStage();
+
+    printf("Start calling accelerator\n");
     
     std::vector<int> render_indices, parent_indices;
     int cycle = 0;
@@ -84,6 +99,7 @@ int callAccelerator(float target_size,
 
     while (true) {
         cycle++;
+        printf("Cycle: %d\n", cycle);
         scheduler.tasks_loaded_to_cache = dcache.update();
 
         bool working = false;
@@ -111,4 +127,20 @@ int callAccelerator(float target_size,
     }
 
     return render_indices.size();
+}
+
+int main() {
+    float target_size = 0.015236032862841614;
+    float viewpoint[3] = {-1.1579, 19.6893, -2.9418};
+    float view_matrix[16] = {0.95878, 0.10376, -0.26453, 0.0,
+    0.28411, -0.33513, 0.89831, 0.0,
+    0.0045524, -0.93644, -0.35080, 0.0,
+    -4.4704, 3.9639, -19.025, 1.0};
+    float proj_matrix[16] =  {1.0055, 0.0, 0.0, 0.0,
+    0.0, 1.3369, 0.0, 0.0,
+    0.0, 0.0, 1.0001, 1.0,
+    0.0, 0.0, -0.0100, 0.0};
+    
+    std::cout << callAccelerator(target_size, viewpoint, renderIndices, parentIndices, view_matrix, proj_matrix) << std::endl;
+    return 0;
 }

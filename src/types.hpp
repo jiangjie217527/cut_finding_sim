@@ -30,6 +30,21 @@ struct Task {
     task.leaf_task_ids.resize(leaf_task_ids_size);
     ifs.read(reinterpret_cast<char*>(task.leaf_task_ids.data()), leaf_task_ids_size * sizeof(int));
 
+    if (task.start_id == -1) {
+        printf("[INFO] leaves_size: %d\n", leaves_size);
+        printf("[INFO] leaf_task_ids_size: %d\n", leaf_task_ids_size);
+
+        for (int i = 0; i < leaves_size; ++i) {
+            printf("[INFO] leaves[%d]: %d\n", i, task.leaves[i]);
+        }
+
+        for (int i = 0; i < leaf_task_ids_size; ++i) {
+            printf("[INFO] leaf_task_ids[%d]: %d\n", i, task.leaf_task_ids[i]);
+        }
+
+        printf("\n");
+    }
+
     return ifs;
 }
 
