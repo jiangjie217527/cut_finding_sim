@@ -51,6 +51,32 @@ bool DCache::readSubtask(int task_id, std::vector<int> &leaves, std::vector<int>
     return false;
 }
 
+bool DCache::cachePrefillData(int task_id, const DRAM &dram) {
+    int bank_id = task_id % BankNum;
+
+    for (int i = 0; i < BankSize; ++i) {
+        if (banks[bank_id].valid[i] || banks[bank_id].occupied[i]) {
+            continue;
+        }
+
+        banks[bank_id].tag[i] = task_id;
+        std::vector<Node> nodes;
+        std::vector<Box> boxes;
+
+        dram.read(task_id, banks[bank_id].data[i].task, nodes, boxes);
+        for (int j = 0; j < banks[bank_id].data[i].task.task_size; ++j) {
+            banks[bank_id].data[i].node[j] = nodes[j];
+            banks[bank_id].data[i].box[j] = boxes[j];
+        }
+        banks[bank_id].valid[i] = true;
+        banks[bank_id].occupied[i] = false;
+        banks[bank_id].dram_counter[i] = divUpperBound(SizeOfCacheData, CacheWordsPerCycle);
+        return true;
+    }
+
+    return false;
+}
+
 bool DCache::cacheLoadData(int task_id, const DRAM &dram) {
     int bank_id = task_id % BankNum;
     

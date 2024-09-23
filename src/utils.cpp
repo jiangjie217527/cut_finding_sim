@@ -1,3 +1,4 @@
+#include "common.hpp"
 #include "utils.hpp"
 #include "types.hpp"
 #include <cmath>
@@ -5,6 +6,7 @@
 bool inbox(const Box &box, const Point &viewpoint) {
     bool inside = true;
 
+    std::cout << "box = (" << box.minn[0] << ", " << box.minn[1] << ", " << box.minn[2] << ") - (" << box.maxx[0] << ", " << box.maxx[1] << ", " << box.maxx[2] << ")" << std::endl;
     for (int i = 0; i < 3; ++i) {
         inside &= box.minn[i] <= viewpoint[i] && viewpoint[i] <= box.maxx[i];
     }
@@ -81,6 +83,8 @@ bool in_frustum(const Box &box, const float* view_matrix, const float* proj_matr
             break;
         }
     }
+
+    std::cout << "[INFO] inside = " << inside << "\n";
 
     return inside;
 }

@@ -2,6 +2,9 @@
 #define HGS_COMMON_HPP_
 
 #include <cassert>
+#include <iostream>
+
+#include "half.hpp"
 #include "types.hpp"
 
 constexpr int PipelineStage = 12;

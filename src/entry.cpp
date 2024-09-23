@@ -59,12 +59,14 @@ void initStage() {
         infile.read(reinterpret_cast<char*>(&count_leaf), sizeof(count_leaf));
         nodes[i] = {parent, subtree_size, count_leaf};
 
-        float minn[4], maxx[4];
-        infile.read(reinterpret_cast<char*>(minn), 4 * sizeof(float));
-        infile.read(reinterpret_cast<char*>(maxx), 4 * sizeof(float));
+        Point4 minn, maxx;
+        infile.read(reinterpret_cast<char*>(&minn), sizeof(minn));
+        infile.read(reinterpret_cast<char*>(&maxx), sizeof(maxx));
 
-        boxes[i].minn = {minn[0], minn[1], minn[2], minn[3]};
-        boxes[i].maxx = {maxx[0], maxx[1], maxx[2], maxx[3]};
+        for (int j = 0; j < 4; ++j) {
+            boxes[i].minn[j] = minn[j];
+            boxes[i].maxx[j] = maxx[j];
+        }
     }
 
     infile.close();
@@ -95,12 +97,15 @@ int callAccelerator(float target_size,
     }
 
     scheduler.task_queue.push(0);
-    dcache.cacheLoadData(0, dram);    
+    dcache.cachePrefillData(0, dram);
 
-    while (true) {
+    while (cycle < 10000) {
         cycle++;
         printf("Cycle: %d\n", cycle);
         scheduler.tasks_loaded_to_cache = dcache.update();
+        for (auto &loaded_task : scheduler.tasks_loaded_to_cache) {
+          scheduler.task_queue.push(loaded_task);
+        }
 
         bool working = false;
         for (int i = 0; i < PENum; ++i) {
@@ -140,7 +145,9 @@ int main() {
     0.0, 1.3369, 0.0, 0.0,
     0.0, 0.0, 1.0001, 1.0,
     0.0, 0.0, -0.0100, 0.0};
-    
+
+    freopen("log.txt", "w", stdout);
     std::cout << callAccelerator(target_size, viewpoint, renderIndices, parentIndices, view_matrix, proj_matrix) << std::endl;
+    fclose(stdout);
     return 0;
 }

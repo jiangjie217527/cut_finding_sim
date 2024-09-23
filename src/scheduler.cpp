@@ -1,5 +1,4 @@
 #include "scheduler.hpp"
-#include "pe.hpp"
 
 bool Scheduler::schedule(DCache &dcache, DRAM &dram) {
     bool result = false;
@@ -7,7 +6,6 @@ bool Scheduler::schedule(DCache &dcache, DRAM &dram) {
     cycle++;
 
     dcache.loadBufferCache();
-    
 
     if (leaf_to_submit.empty() && tasks_to_submit.empty() && task_queue.empty()) {
         return false;
@@ -28,11 +26,13 @@ bool Scheduler::schedule(DCache &dcache, DRAM &dram) {
                     if (leaves[i] == leaf_id) {
                         tasks_waitlist.push(leaf_task_ids[i]);
                     }
-
-                    if (is_end) {
-                        if_leaves_submitted.insert(leaf_id);
-                    }
                 }
+
+                if (is_end) {
+                  if_leaves_submitted.insert(task_id);
+                }
+
+                leaf_to_submit.pop();
             }
         }
     }
@@ -44,7 +44,8 @@ bool Scheduler::schedule(DCache &dcache, DRAM &dram) {
 
         if (time_stamp <= cycle && if_leaves_submitted.find(task_id) != if_leaves_submitted.end()) {
             // can kick the task out of DCache
-            int pos = dcache.invalidate(task_id);
+            dcache.invalidate(task_id);
+            tasks_to_submit.pop();
         }
     }
 
