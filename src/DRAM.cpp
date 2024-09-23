@@ -12,13 +12,13 @@ void DRAM::read(int task_id, Task &task, std::vector<Node> &read_nodes, std::vec
   }
 }
 
-void DRAM::init(const std::vector<Node>& nodes, const std::vector<Task>& tasks, const std::vector<Box>& boxes) {
-    this->nodes = nodes;
-    this->tasks = tasks;
-    this->boxes = boxes;
+void DRAM::init(const std::vector<Node> &nodes, const std::vector<Task> &tasks, const std::vector<Box> &boxes) {
+  this->nodes = nodes;
+  this->tasks = tasks;
+  this->boxes = boxes;
 
-    std::cout << "[debug]: nodes.size() = " << this->nodes.size() << "\n";
-    std::cout << "[debug]: tasks.size() = " << this->tasks.size() << "\n";
-    std::cout << "[debug]: boxes.size() = " << this->boxes.size() << "\n";
+  std::cout << "[debug]: nodes.size() = " << this->nodes.size() << "\n";
+  std::cout << "[debug]: tasks.size() = " << this->tasks.size() << "\n";
+  std::cout << "[debug]: boxes.size() = " << this->boxes.size() << "\n";
 //    exit(0);
 }
