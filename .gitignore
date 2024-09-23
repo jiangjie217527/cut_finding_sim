@@ -7,3 +7,7 @@ cut_simulation.cbp
 Makefile
 reorder copy.bin
 CMakeFiles/
+Testing/
+.idea/
+dependencies/
+*.txt
