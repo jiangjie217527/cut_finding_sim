@@ -6,7 +6,7 @@
 bool inbox(const Box &box, const Point &viewpoint) {
     bool inside = true;
 
-    std::cout << "box = (" << box.minn[0] << ", " << box.minn[1] << ", " << box.minn[2] << ") - (" << box.maxx[0] << ", " << box.maxx[1] << ", " << box.maxx[2] << ")" << std::endl;
+//    std::cout << "box = (" << box.minn[0] << ", " << box.minn[1] << ", " << box.minn[2] << ") - (" << box.maxx[0] << ", " << box.maxx[1] << ", " << box.maxx[2] << ")" << std::endl;
     for (int i = 0; i < 3; ++i) {
         inside &= box.minn[i] <= viewpoint[i] && viewpoint[i] <= box.maxx[i];
     }
@@ -26,6 +26,8 @@ float pointboxdist(const Box &box, const Point &viewpoint) {
         closest[1] - viewpoint[1],
         closest[2] - viewpoint[2]
     };
+
+    std::cout << "[INFO] diff = (" << diff[0] << ", " << diff[1] << ", " << diff[2] << ")\n";
 
     return std::sqrt(diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2]);
 }

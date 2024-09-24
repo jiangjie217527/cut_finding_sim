@@ -6,6 +6,24 @@ int divUpperBound(int a, int b) {
   return (a + b - 1) / b;
 }
 
+bool DCache::busy() {
+  for (int i = 0; i < BankNum; ++i) {
+    for (int j = 0; j < BankSize; ++j) {
+      if (banks[i].occupied[j]) {
+        return true;
+      }
+    }
+  }
+
+  for (int i = 0; i < BufferCacheSize; ++i) {
+    if (buffer_cache.busy[i]) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool DCache::readData(int task_id, Task &task, std::vector<Node> &nodes, std::vector<Box> &boxes) {
   int bank_id = task_id % BankNum;
 

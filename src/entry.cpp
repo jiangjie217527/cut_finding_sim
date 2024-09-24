@@ -71,6 +71,14 @@ void initStage() {
 
   infile.close();
 
+  for (int i = 0; i < tasks_size; ++i) {
+    Task &task = tasks[i];
+    for (int j = 0; j < task.leaves.size(); ++j) {
+      int leaf = task.leaves[j];
+      nodes[leaf].is_task_leaf = true;
+    }
+  }
+
   dram.init(nodes, tasks, boxes);
 }
 
@@ -105,7 +113,7 @@ int callAccelerator(float target_size,
     scheduler.tasks_loaded_to_cache = dcache.update();
 
     for (auto &loaded_task: scheduler.tasks_loaded_to_cache) {
-
+      std::cout << "\033[31m[INFO] loaded task: " << loaded_task << "\033[0m\n";
     }
 
     for (auto &loaded_task: scheduler.tasks_loaded_to_cache) {
@@ -118,6 +126,9 @@ int callAccelerator(float target_size,
     }
 
     working |= scheduler.schedule(dcache, dram);
+    working |= dcache.busy();
+
+    std::cout << "[INFO] task_queue.size() = " << scheduler.task_queue.size() << "\n";
 
     if (!working && scheduler.task_queue.empty()) {
       break;
