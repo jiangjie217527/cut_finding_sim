@@ -1,4 +1,6 @@
 #include "entry.hpp"
+
+#include <algorithm>
 #include <cstdio>
 #include <iostream>
 
@@ -6,7 +8,7 @@ Scheduler scheduler;
 DRAM dram;
 DCache dcache;
 
-constexpr int maxn = 3e6;
+constexpr int maxn = 8e6;
 int renderIndices[maxn], parentIndices[maxn];
 
 std::vector<Task> tasks;
@@ -14,9 +16,48 @@ std::vector<Node> nodes;
 std::vector<Box> boxes;
 std::vector<int> reorder_indices;
 std::vector<int> reversed_indices;
+std::unordered_set<int> render_set;
+
+void checkNodeOverlap() {
+  std::unordered_set<int> indices;
+  for (int i = 0; i < tasks.size(); ++i) {
+    Task task = tasks[i];
+    for (int j = task.start_id; j < task.start_id + task.task_size; ++j) {
+      if (indices.find(j) != indices.end()) {
+        printf("Error: overlap\n");
+        exit(1);
+      }
+      indices.insert(j);
+    }
+  }
+}
+
+void checkTaskOverlap() {
+  std::unordered_set<int> task_set;
+
+  for (int i = 0; i < tasks.size(); ++i) {
+    Task task = tasks[i];
+    for (int j = 0; j < task.leaves.size(); ++j) {
+      int subtask = task.leaf_task_ids[j];
+      if (task_set.find(subtask) != task_set.end()) {
+        std::cerr << "[ERROR]: duplicate subtask: " << subtask << "\n";
+        exit(1);
+      }
+
+      task_set.insert(subtask);
+    }
+  }
+
+  std::cerr << "[INFO]: pass checkTaskOverlap\n";
+}
+
+void checkOverlap() {
+  checkNodeOverlap();
+  checkTaskOverlap();
+}
 
 void initStage() {
-  std::ifstream infile("reorder copy.bin", std::ios::binary);
+  std::ifstream infile("reorder.bin", std::ios::binary);
   if (!infile.is_open()) {
     printf("Error: cannot open reorder.bin\n");
     exit(1);
@@ -71,6 +112,9 @@ void initStage() {
 
   infile.close();
 
+  checkOverlap();
+  std::cerr << "[INFO]: pass checkOverlap\n";
+
   for (int i = 0; i < tasks_size; ++i) {
     Task &task = tasks[i];
     for (int j = 0; j < task.leaves.size(); ++j) {
@@ -78,6 +122,9 @@ void initStage() {
       nodes[leaf].is_task_leaf = true;
     }
   }
+
+  std::cerr << "[INFO] tasks.size() = " << tasks.size() << "\n";
+  std::cerr << "[INFO] nodes.size() = " << nodes.size() << "\n";
 
   dram.init(nodes, tasks, boxes);
 }
@@ -107,7 +154,8 @@ int callAccelerator(float target_size,
   scheduler.task_queue.push(0);
   dcache.cachePrefillData(0, dram);
 
-  while (cycle < 10000) {
+  size_t prev = 0;
+  while (cycle < 50000000) {
     cycle++;
     printf("Cycle: %d\n", cycle);
     scheduler.tasks_loaded_to_cache = dcache.update();
@@ -130,17 +178,34 @@ int callAccelerator(float target_size,
 
     std::cout << "[INFO] task_queue.size() = " << scheduler.task_queue.size() << "\n";
 
-    if (!working && scheduler.task_queue.empty()) {
+    if (!working && scheduler.task_queue.empty() || render_indices.size() == 1167810) {
       break;
     }
+
+    for (int i = prev; i < render_indices.size(); ++i) {
+      if (render_set.find(render_indices[i]) != render_set.end()) {
+        std::cerr << "[ERROR] duplicate render_indices: " << render_indices[i] << "\n";
+        exit(1);
+      }
+
+      render_set.insert(render_indices[i]);
+    }
+
+    prev = render_indices.size();
   }
+
+  // make sure render_indices is unique
+  std::sort(render_indices.begin(), render_indices.end());
+  render_indices.erase(std::unique(render_indices.begin(), render_indices.end()), render_indices.end());
+  std::cerr << "[INFO] render_indices.size() = " << render_indices.size() << "\n";
+  assert(render_indices.size() == parent_indices.size());
 
   for (int i = 0; i < render_indices.size(); ++i) {
     renderIndices[i] = render_indices[i];
     parentIndices[i] = parent_indices[i];
   }
 
-  printf("Total cycles: %d\n", cycle);
+  std::cerr << "total cycles: " << cycle << std::endl;
 
   for (int i = 0; i < render_indices.size(); ++i) {
     renderIndices[i] = reversed_indices[renderIndices[i]];
@@ -163,7 +228,7 @@ int main() {
                            0.0, 0.0, -0.0100, 0.0};
 
   freopen("log.txt", "w", stdout);
-  std::cout << callAccelerator(target_size, viewpoint, renderIndices, parentIndices, view_matrix, proj_matrix)
+  std::cerr << callAccelerator(target_size, viewpoint, renderIndices, parentIndices, view_matrix, proj_matrix)
             << std::endl;
   fclose(stdout);
   return 0;

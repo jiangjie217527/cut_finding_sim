@@ -39,19 +39,19 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
     }
 
     if (this->inner_id == -1) {
-      this->cur_id = task_queue.front();
+      this->inner_id = task_queue.front();
       task_queue.pop();
-      std::cout << "[debug]: fetching task = " << this->cur_id << "\n";
+      std::cout << "[debug]: fetching task = " << this->inner_id << "\n";
     }
 
     std::vector<Node> nodes;
     std::vector<Box> boxes;
 
-    if (!dcache.readData(cur_id, this->cur_task, nodes, boxes)) {
+    if (!dcache.readData(inner_id, this->cur_task, nodes, boxes)) {
+      std::cout << "[DCache]: bank conflict in task: " << this->inner_id << '\n';
       return true; // bank conflict
     }
 
-    this->inner_id = cur_id;
     this->busy = true;
     this->cur_id = cur_task.start_id;
 

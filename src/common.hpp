@@ -8,7 +8,7 @@
 #include "types.hpp"
 
 constexpr int PipelineStage = 12;
-constexpr int DRAMWordsPerCycle = 2;
+constexpr int DRAMWordsPerCycle = 4;
 constexpr int TaskQueueSize = 12;
 constexpr int PENum = 4;
 

@@ -27,7 +27,7 @@ float pointboxdist(const Box &box, const Point &viewpoint) {
         closest[2] - viewpoint[2]
     };
 
-    std::cout << "[INFO] diff = (" << diff[0] << ", " << diff[1] << ", " << diff[2] << ")\n";
+//    std::cout << "[INFO] diff = (" << diff[0] << ", " << diff[1] << ", " << diff[2] << ")\n";
 
     return std::sqrt(diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2]);
 }
@@ -86,7 +86,7 @@ bool in_frustum(const Box &box, const float* view_matrix, const float* proj_matr
         }
     }
 
-    std::cout << "[INFO] inside = " << inside << "\n";
+//    std::cout << "[INFO] inside = " << inside << "\n";
 
     return inside;
 }

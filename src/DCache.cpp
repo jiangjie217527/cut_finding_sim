@@ -114,7 +114,7 @@ bool DCache::cacheLoadData(int task_id, const DRAM &dram) {
     }
     banks[bank_id].valid[i] = false;
     banks[bank_id].occupied[i] = true;
-    banks[bank_id].dram_counter[i] = divUpperBound(SizeOfCacheData, CacheWordsPerCycle);
+    banks[bank_id].dram_counter[i] = divUpperBound(SizeOfCacheData, DRAMWordsPerCycle);
     return true;
   }
 
@@ -138,7 +138,7 @@ bool DCache::bufferCacheLoadData(int task_id, const DRAM &dram) {
     }
     buffer_cache.valid[i] = false;
     buffer_cache.busy[i] = true;
-    buffer_cache.counter[i] = divUpperBound(SizeOfCacheData, CacheWordsPerCycle);
+    buffer_cache.counter[i] = divUpperBound(SizeOfCacheData, DRAMWordsPerCycle);
     return true;
   }
 
@@ -218,3 +218,54 @@ void DCache::loadBufferCache() {
     }
   }
 }
+
+// print the layout of DCache, containing banks and the buffer cache, and the status, tags of each bank and the buffer cache
+void DCache::printStatus() {
+  std::cout << "DCache status:\n";
+  for (int i = 0; i < BankNum; ++i) {
+    std::cout << "Bank " << i << ":\n";
+    for (int j = 0; j < BankSize; ++j) {
+      std::cout << "  " << j << ": ";
+      if (banks[i].valid[j]) {
+        std::cout << "valid, ";
+      } else {
+        std::cout << "invalid, ";
+      }
+
+      if (banks[i].occupied[j]) {
+        std::cout << "occupied, ";
+      } else {
+        std::cout << "not occupied, ";
+      }
+
+      if (banks[i].busy) {
+        std::cout << "busy, ";
+      } else {
+        std::cout << "not busy, ";
+      }
+
+      std::cout << "tag = " << banks[i].tag[j] << ", ";
+      std::cout << "dram_counter = " << banks[i].dram_counter[j] << "\n";
+    }
+  }
+
+  std::cout << "Buffer Cache:\n";
+  for (int i = 0; i < BufferCacheSize; ++i) {
+    std::cout << "  " << i << ": ";
+    if (buffer_cache.valid[i]) {
+      std::cout << "valid, ";
+    } else {
+      std::cout << "invalid, ";
+    }
+
+    if (buffer_cache.busy[i]) {
+      std::cout << "busy, ";
+    } else {
+      std::cout << "not busy, ";
+    }
+
+    std::cout << "tag = " << buffer_cache.tag[i] << ", ";
+    std::cout << "counter = " << buffer_cache.counter[i] << "\n";
+  }
+}
+
