@@ -49,5 +49,9 @@ The scheduler has to the deal with the commit buffer in this way:
     - if a task is finished, **invalidate it**
     - if there's a task finished, put the first task in the waiting queue into the cache (ask for DRAM), and fill it into `task_queue` once the DRAM has finished.
 
-## Discussion of details
+## 3. Discussion of details
+
+### 3.1 How to decide whether our simulator has halted
+
+
 
