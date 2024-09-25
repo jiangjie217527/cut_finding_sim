@@ -155,7 +155,7 @@ int callAccelerator(float target_size,
   dcache.cachePrefillData(0, dram);
 
   size_t prev = 0;
-  while (cycle < 50000000) {
+  while (cycle < 4000000) {
     cycle++;
     printf("Cycle: %d\n", cycle);
     scheduler.tasks_loaded_to_cache = dcache.update();
@@ -178,11 +178,11 @@ int callAccelerator(float target_size,
 
     std::cout << "[INFO] task_queue.size() = " << scheduler.task_queue.size() << "\n";
 
-    if (!working && scheduler.task_queue.empty() || render_indices.size() == 1167810) {
+    if (!working && scheduler.task_queue.empty()) {
       break;
     }
 
-    for (int i = prev; i < render_indices.size(); ++i) {
+    for (size_t i = prev; i < render_indices.size(); ++i) {
       if (render_set.find(render_indices[i]) != render_set.end()) {
         std::cerr << "[ERROR] duplicate render_indices: " << render_indices[i] << "\n";
         exit(1);
@@ -193,6 +193,8 @@ int callAccelerator(float target_size,
 
     prev = render_indices.size();
   }
+
+  dcache.printStatus(std::cerr);
 
   // make sure render_indices is unique
   std::sort(render_indices.begin(), render_indices.end());

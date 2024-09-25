@@ -13,8 +13,8 @@ constexpr int TaskQueueSize = 12;
 constexpr int PENum = 4;
 
 // for DCache
-constexpr int BankNum = 4;
-constexpr int BankSize = (TaskQueueSize + PENum) / BankNum;
+constexpr int BankNum = 8;
+constexpr int BankSize = 2 * (TaskQueueSize + PENum) / BankNum;
 constexpr int PortWordsPerCycle = 4;
 constexpr int PortNum = 4;
 constexpr int CacheWordsPerCycle = PortWordsPerCycle * PortNum;
