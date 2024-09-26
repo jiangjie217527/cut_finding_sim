@@ -51,12 +51,22 @@ void checkTaskOverlap() {
   std::cerr << "[INFO]: pass checkTaskOverlap\n";
 }
 
+void checkReorder() {
+  for (int i = 0; i < reorder_indices.size(); ++i) {
+    assert(reversed_indices[reorder_indices[i]] == i);
+  }
+}
+
 void checkOverlap() {
+  checkReorder();
+  std::cerr << "[INFO]: pass checkReorder\n";
   checkNodeOverlap();
   checkTaskOverlap();
 }
 
 void initStage() {
+  size_t max_subtask_size = 0;
+
   std::ifstream infile("reorder.bin", std::ios::binary);
   if (!infile.is_open()) {
     printf("Error: cannot open reorder.bin\n");
@@ -87,7 +97,10 @@ void initStage() {
   tasks.resize(tasks_size);
   for (int i = 0; i < tasks_size; ++i) {
     infile >> tasks[i];
+    max_subtask_size = std::max(max_subtask_size, tasks[i].leaf_task_ids.size());
   }
+
+  std::cerr << "[critical]: max_subtask_size = " << max_subtask_size << "\n";
 
   size_t nodes_size;
   infile.read(reinterpret_cast<char *>(&nodes_size), sizeof(nodes_size));
@@ -99,6 +112,10 @@ void initStage() {
     infile.read(reinterpret_cast<char *>(&subtree_size), sizeof(subtree_size));
     infile.read(reinterpret_cast<char *>(&count_leaf), sizeof(count_leaf));
     nodes[i] = {parent, subtree_size, count_leaf};
+
+    if (reversed_indices[i] < 32) {
+      std::cerr << "[INFO]: node " << reversed_indices[i] << " has parent = " << reversed_indices[parent] << ", subtree_size = " << subtree_size << ", count_leaf = " << count_leaf << "\n";
+    }
 
     Point4 minn, maxx;
     infile.read(reinterpret_cast<char *>(&minn), sizeof(minn));
@@ -155,7 +172,7 @@ int callAccelerator(float target_size,
   dcache.cachePrefillData(0, dram);
 
   size_t prev = 0;
-  while (cycle < 4000000) {
+  while (true) {
     cycle++;
     printf("Cycle: %d\n", cycle);
     scheduler.tasks_loaded_to_cache = dcache.update();
@@ -169,11 +186,13 @@ int callAccelerator(float target_size,
     }
 
     bool working = false;
+
+    working |= scheduler.schedule(dcache, dram);
+
     for (int i = 0; i < PENum; ++i) {
       working |= pes[i].updateTick(scheduler.task_queue, dcache, scheduler);
     }
 
-    working |= scheduler.schedule(dcache, dram);
     working |= dcache.busy();
 
     std::cout << "[INFO] task_queue.size() = " << scheduler.task_queue.size() << "\n";
@@ -214,20 +233,25 @@ int callAccelerator(float target_size,
     parentIndices[i] = reversed_indices[parentIndices[i]];
   }
 
+  freopen("my_to_render.txt", "w", stdout);
+  for (int i = 0; i < render_indices.size(); ++i) {
+    std::cout << renderIndices[i] << '\n';
+  }
+
   return render_indices.size();
 }
 
 int main() {
   float target_size = 0.015236032862841614;
   float viewpoint[3] = {-1.1579, 19.6893, -2.9418};
-  float view_matrix[16] = {0.95878, 0.10376, -0.26453, 0.0,
-                           0.28411, -0.33513, 0.89831, 0.0,
-                           0.0045524, -0.93644, -0.35080, 0.0,
-                           -4.4704, 3.9639, -19.025, 1.0};
-  float proj_matrix[16] = {1.0055, 0.0, 0.0, 0.0,
-                           0.0, 1.3369, 0.0, 0.0,
+  float view_matrix[16] = {0.95878, 0.103756, -0.264529, 0.0,
+                           0.284113, -0.335135, 0.898312, 0.0,
+                           0.00455242, -0.93644, -0.350799, 0.0,
+                           -4.4704, 3.9639, -19.0254, 1.0};
+  float proj_matrix[16] = {1.00553, 0.0, 0.0, 0.0,
+                           0.0, 1.33695, 0.0, 0.0,
                            0.0, 0.0, 1.0001, 1.0,
-                           0.0, 0.0, -0.0100, 0.0};
+                           0.0, 0.0, -0.010001, 0.0};
 
   freopen("log.txt", "w", stdout);
   std::cerr << callAccelerator(target_size, viewpoint, renderIndices, parentIndices, view_matrix, proj_matrix)

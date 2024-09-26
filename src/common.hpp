@@ -21,7 +21,7 @@ constexpr int CacheWordsPerCycle = PortWordsPerCycle * PortNum;
 constexpr int BufferCacheSize = 2;
 // for Task
 constexpr int MaxTaskSize = 32;
-constexpr int MaxSubtaskSize = 32;
+constexpr int MaxSubtaskSize = 125;
 constexpr int SizeOfCacheData = MaxSubtaskSize * (sizeof(int) + sizeof(int)) + (sizeof(int) << 1);
 // for Scheduler
 constexpr int MaxLeafBufferSize = 32;
