@@ -11,7 +11,7 @@ DRAM dram;
 DCache dcache;
 
 constexpr int maxn = 8e6;
-int renderIndices[maxn], parentIndices[maxn];
+int globalNodesForRenderIndices[maxn], globalParentIndices[maxn], globalRenderIndices[maxn];
 
 std::vector<Task> tasks;
 std::vector<Node> nodes;
@@ -211,6 +211,7 @@ void initStage(float *viewpoint) {
 int callAccelerator(float target_size,
                     float *viewpoint,
                     int *renderIndices,
+                    int *nodesForRenderIndices,
                     int *parentIndices,
                     const float *view_matrix,
                     const float *proj_matrix) {
@@ -218,13 +219,13 @@ int callAccelerator(float target_size,
 
   printf("Start calling accelerator\n");
 
-  std::vector<int> render_indices, parent_indices;
+  std::vector<int> render_indices, nodes_for_render_indices, parent_indices;
   int cycle = 0;
   PE pes[PENum] = {
-          PE(render_indices, parent_indices),
-          PE(render_indices, parent_indices),
-          PE(render_indices, parent_indices),
-          PE(render_indices, parent_indices)
+          PE(nodes_for_render_indices, parent_indices),
+          PE(nodes_for_render_indices, parent_indices),
+          PE(nodes_for_render_indices, parent_indices),
+          PE(nodes_for_render_indices, parent_indices)
   };
   for (int i = 0; i < PENum; ++i) {
     pes[i].loadMeta(target_size, viewpoint, view_matrix, proj_matrix);
@@ -263,51 +264,51 @@ int callAccelerator(float target_size,
       break;
     }
 
-    for (size_t i = prev; i < render_indices.size(); ++i) {
-      if (render_set.find(render_indices[i]) != render_set.end()) {
-        std::cerr << "[ERROR] duplicate render_indices: " << render_indices[i] << "\n";
+    for (size_t i = prev; i < nodes_for_render_indices.size(); ++i) {
+      if (render_set.find(nodes_for_render_indices[i]) != render_set.end()) {
+        std::cerr << "[ERROR] duplicate nodes_for_render_indices: " << nodes_for_render_indices[i] << "\n";
         exit(1);
       }
 
-      render_set.insert(render_indices[i]);
+      render_set.insert(nodes_for_render_indices[i]);
     }
 
-    prev = render_indices.size();
+    prev = nodes_for_render_indices.size();
   }
 
   dcache.printStatus(std::cerr);
 
-  // make sure render_indices is unique
-  std::sort(render_indices.begin(), render_indices.end());
-  render_indices.erase(std::unique(render_indices.begin(), render_indices.end()), render_indices.end());
-  std::cerr << "[INFO] render_indices.size() = " << render_indices.size() << "\n";
-  assert(render_indices.size() == parent_indices.size());
+  // make sure nodes_for_render_indices is unique
+  std::sort(nodes_for_render_indices.begin(), nodes_for_render_indices.end());
+  nodes_for_render_indices.erase(std::unique(nodes_for_render_indices.begin(), nodes_for_render_indices.end()), nodes_for_render_indices.end());
+  std::cerr << "[INFO] nodes_for_render_indices.size() = " << nodes_for_render_indices.size() << "\n";
+  assert(nodes_for_render_indices.size() == parent_indices.size());
 
-  for (int i = 0; i < render_indices.size(); ++i) {
-    renderIndices[i] = render_indices[i];
+  for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
+    nodesForRenderIndices[i] = nodes_for_render_indices[i];
     parentIndices[i] = parent_indices[i];
   }
 
   std::cerr << "total cycles: " << cycle << std::endl;
 
-  for (int i = 0; i < render_indices.size(); ++i) {
-    if (reversed_indices[renderIndices[i]] == 45) {
+  for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
+    if (reversed_indices[nodesForRenderIndices[i]] == 45) {
       std::cerr << "i = " << i << "\n";
-      std::cerr << "renderIndices[i] = " << renderIndices[i] << "\n";
-      std::cerr << "parentIndices[i] = " << parentIndices[i] << "\n";
-      std::cerr << "reversed_indices[renderIndices[i]] = " << reversed_indices[renderIndices[i]] << "\n";
-      std::cerr << "reversed_indices[parentIndices[i]] = " << reversed_indices[parentIndices[i]] << "\n";
+      std::cerr << "nodesForRenderIndices[i] = " << nodesForRenderIndices[i] << "\n";
+      std::cerr << "globalParentIndices[i] = " << parentIndices[i] << "\n";
+      std::cerr << "reversed_indices[nodesForRenderIndices[i]] = " << reversed_indices[nodesForRenderIndices[i]] << "\n";
+      std::cerr << "reversed_indices[globalParentIndices[i]] = " << reversed_indices[parentIndices[i]] << "\n";
     }
-    renderIndices[i] = reversed_indices[renderIndices[i]];
+    nodesForRenderIndices[i] = reversed_indices[nodesForRenderIndices[i]];
     parentIndices[i] = reversed_indices[parentIndices[i]];
   }
 
   freopen("my_to_render.txt", "w", stdout);
-  for (int i = 0; i < render_indices.size(); ++i) {
-    std::cout << renderIndices[i] << '\n';
+  for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
+    std::cout << nodesForRenderIndices[i] << '\n';
   }
 
-  return render_indices.size();
+  return nodes_for_render_indices.size();
 }
 
 int main() {
@@ -323,7 +324,7 @@ int main() {
                                   0.0, 0.0, -0.010001, 0.0};
 
   freopen("log.txt", "w", stdout);
-  std::cerr << callAccelerator(target_size, viewpoint, renderIndices, parentIndices, view_matrix, proj_matrix)
+  std::cerr << callAccelerator(target_size, viewpoint, globalRenderIndices, globalNodesForRenderIndices, globalParentIndices, view_matrix, proj_matrix)
             << std::endl;
   fclose(stdout);
   check();
