@@ -7,7 +7,7 @@ bool Scheduler::schedule(DCache &dcache, DRAM &dram) {
 
   dcache.loadBufferCache();
 
-  if (leaf_to_submit.empty() && tasks_to_submit.empty() && task_queue.empty()) {
+  if (leaf_to_submit.empty() && tasks_to_submit.empty() && task_queue.empty() && tasks_waitlist.empty()) {
     return false;
   }
 
@@ -18,6 +18,13 @@ bool Scheduler::schedule(DCache &dcache, DRAM &dram) {
     int time_stamp = std::get<1>(leaf);
     int leaf_id = std::get<2>(leaf);
     bool is_end = std::get<3>(leaf);
+
+    if (leaf_id == -1) {
+      leaf_to_submit.pop();
+      if_leaves_submitted.insert(task_id);
+      return true;
+    }
+
     if (time_stamp <= cycle) {
       // find the corresponding sub_tasks in the cache
       std::vector<int> leaves, leaf_task_ids;

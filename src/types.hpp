@@ -8,9 +8,12 @@
 #include "half.hpp"
 
 struct Node {
-    int parent_id;
-    int subtree_size;
-    int count_leaf;
+    int parent_id = 0;
+    int subtree_size = 0;
+    int count_leaf = 0;
+    int start = 0;
+    int parent_start = 0;
+    bool is_task_leaf = false;
 };
 
 struct HalfBox {

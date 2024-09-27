@@ -3,7 +3,26 @@
 #include <cassert>
 
 int divUpperBound(int a, int b) {
+  assert((a + b - 1) / b != 0);
   return (a + b - 1) / b;
+}
+
+bool DCache::busy() {
+  for (int i = 0; i < BankNum; ++i) {
+    for (int j = 0; j < BankSize; ++j) {
+      if (banks[i].occupied[j]) {
+        return true;
+      }
+    }
+  }
+
+  for (int i = 0; i < BufferCacheSize; ++i) {
+    if (buffer_cache.busy[i]) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 bool DCache::readData(int task_id, Task &task, std::vector<Node> &nodes, std::vector<Box> &boxes) {
@@ -70,7 +89,6 @@ bool DCache::cachePrefillData(int task_id, const DRAM &dram) {
     }
     banks[bank_id].valid[i] = true;
     banks[bank_id].occupied[i] = false;
-    banks[bank_id].dram_counter[i] = divUpperBound(SizeOfCacheData, CacheWordsPerCycle);
     return true;
   }
 
@@ -96,7 +114,7 @@ bool DCache::cacheLoadData(int task_id, const DRAM &dram) {
     }
     banks[bank_id].valid[i] = false;
     banks[bank_id].occupied[i] = true;
-    banks[bank_id].dram_counter[i] = divUpperBound(SizeOfCacheData, CacheWordsPerCycle);
+    banks[bank_id].dram_counter[i] = divUpperBound(SizeOfCacheData, DRAMWordsPerCycle);
     return true;
   }
 
@@ -120,7 +138,7 @@ bool DCache::bufferCacheLoadData(int task_id, const DRAM &dram) {
     }
     buffer_cache.valid[i] = false;
     buffer_cache.busy[i] = true;
-    buffer_cache.counter[i] = divUpperBound(SizeOfCacheData, CacheWordsPerCycle);
+    buffer_cache.counter[i] = divUpperBound(SizeOfCacheData, DRAMWordsPerCycle);
     return true;
   }
 
@@ -130,15 +148,17 @@ bool DCache::bufferCacheLoadData(int task_id, const DRAM &dram) {
 std::vector<int> DCache::update() {
   std::vector<int> res;
   for (int i = 0; i < BankNum; ++i) {
-    if (banks[i].busy) { // data transfer from buffer cache
+    if (banks[i].busy) { // data transfer from buffer cache or reading from cache
       banks[i].counter--;
       if (banks[i].counter == 0) {
         // finish transferring data
         banks[i].busy = false;
         if (banks[i].busy_id != -1) {
+          std::cerr << "detail: (tag, busy_id) = (" << banks[i].tag[banks[i].busy_id] << ", " << banks[i].busy_id << ")\n";
           banks[i].valid[banks[i].busy_id] = true;
           banks[i].occupied[banks[i].busy_id] = false;
           res.push_back(banks[i].tag[banks[i].busy_id]);
+          banks[i].busy_id = -1;
         }
       }
     }
@@ -146,11 +166,22 @@ std::vector<int> DCache::update() {
     for (int j = 0; j < BankSize; ++j) { // data transfer from DRAM
       if (banks[i].occupied[j]) {
         banks[i].dram_counter[j]--;
+        assert(banks[i].dram_counter[j] >= 0);
         if (banks[i].dram_counter[j] == 0) {
           banks[i].occupied[j] = false;
           banks[i].valid[j] = true;
           res.push_back(banks[i].tag[j]);
         }
+      }
+    }
+  }
+
+  for (int i = 0; i < BufferCacheSize; ++i) {
+    if (buffer_cache.busy[i]) {
+      buffer_cache.counter[i]--;
+      if (buffer_cache.counter[i] == 0) {
+        buffer_cache.busy[i] = false;
+        buffer_cache.valid[i] = true;
       }
     }
   }
@@ -188,6 +219,7 @@ void DCache::loadBufferCache() {
         banks[bank_id].tag[j] = buffer_cache.tag[i];
         banks[bank_id].data[j] = buffer_cache.data[i];
         banks[bank_id].occupied[j] = true;
+        banks[bank_id].dram_counter[j] = divUpperBound(SizeOfCacheData, CacheWordsPerCycle);
         banks[bank_id].busy = true;
         banks[bank_id].busy_id = j;
         banks[bank_id].counter = divUpperBound(SizeOfCacheData, CacheWordsPerCycle);
@@ -200,3 +232,50 @@ void DCache::loadBufferCache() {
     }
   }
 }
+
+// print the layout of DCache, containing banks and the buffer cache, and the status, tags of each bank and the buffer cache
+void DCache::printStatus(std::ostream &os) {
+  os << "DCache:\n";
+
+  for (int i = 0; i < BankNum; ++i) {
+    os << "  Bank " << i << ":\n";
+    for (int j = 0; j < BankSize; ++j) {
+      os << "    " << j << ": ";
+      if (banks[i].valid[j]) {
+        os << "valid, ";
+      } else {
+        os << "invalid, ";
+      }
+
+      if (banks[i].occupied[j]) {
+        os << "occupied, ";
+      } else {
+        os << "not occupied, ";
+      }
+
+      os << "tag = " << banks[i].tag[j] << ", ";
+      os << "dram_counter = " << banks[i].dram_counter[j] << "\n";
+    }
+  }
+
+  os << "  Buffer Cache:\n";
+
+  for (int i = 0; i < BufferCacheSize; ++i) {
+    os << "    " << i << ": ";
+    if (buffer_cache.valid[i]) {
+      os << "valid, ";
+    } else {
+      os << "invalid, ";
+    }
+
+    if (buffer_cache.busy[i]) {
+      os << "busy, ";
+    } else {
+      os << "not busy, ";
+    }
+
+    os << "tag = " << buffer_cache.tag[i] << ", ";
+    os << "counter = " << buffer_cache.counter[i] << "\n";
+  }
+}
+

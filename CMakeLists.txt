@@ -24,3 +24,9 @@ include_directories(dependencies/eigen)  # 这里添加 Eigen 头文件路径
 
 # 添加可执行文件
 add_executable(cut_simulation ${SOURCES})
+
+# 添加编译选项
+target_compile_options(cut_simulation PRIVATE -Wall -ftrapv -fsanitize=undefined -fsanitize=address -g)
+
+# 添加链接选项
+target_link_options(cut_simulation PRIVATE -fsanitize=undefined -fsanitize=address)

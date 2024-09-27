@@ -44,6 +44,8 @@ struct DCache {
     std::vector<int> update();
     int invalidate(int task_id);
     void loadBufferCache();
+    void printStatus(std::ostream &os);
+    bool busy();
 };
 
 #endif // HGS_DCache_HPP_
