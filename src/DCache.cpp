@@ -166,10 +166,6 @@ std::vector<int> DCache::update() {
     for (int j = 0; j < BankSize; ++j) { // data transfer from DRAM
       if (banks[i].occupied[j]) {
         banks[i].dram_counter[j]--;
-        if (banks[i].dram_counter[j] < 0) {
-          std::cerr << "DRAM counter < 0\n";
-          std::cerr << "detail: (tag, dram_counter) = (" << banks[i].tag[j] << ", " << banks[i].dram_counter[j] << ")\n";
-        }
         assert(banks[i].dram_counter[j] >= 0);
         if (banks[i].dram_counter[j] == 0) {
           banks[i].occupied[j] = false;

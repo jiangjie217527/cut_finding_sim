@@ -9,7 +9,8 @@ InnerTask::InnerTask(int offset, int inner_id, PE *parent_pe) : offset(offset), 
 }
 
 PE::PE(std::vector<int> &render_indices,
-       std::vector<int> &parent_indices) : render_indices(render_indices), parent_indices(parent_indices) {
+       std::vector<int> &nodes_for_render_indices,
+       std::vector<int> &parent_indices) : render_indices(render_indices), nodes_for_render_indices(nodes_for_render_indices), parent_indices(parent_indices) {
   for (int i = 0; i < PipelineStage; ++i) {
     inner_tasks[i] = InnerTask(i, i, this);
   }
@@ -41,24 +42,17 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
     if (this->inner_id == -1) {
       this->inner_id = task_queue.front();
       task_queue.pop();
-      std::cout << "[debug]: fetching task = " << this->inner_id << "\n";
     }
 
     std::vector<Node> nodes;
     std::vector<Box> boxes;
 
     if (!dcache.readData(inner_id, this->cur_task, nodes, boxes)) {
-      std::cout << "[DCache]: bank conflict in task: " << this->inner_id << '\n';
       return true; // bank conflict
     }
 
     this->busy = true;
     this->cur_id = cur_task.start_id;
-
-    std::cout << "[PE]: getting real task: " << this->inner_id << '\n';
-    for (int i = 0; i < cur_task.leaves.size(); ++i) {
-      std::cout << "[PE]: (leaf, subtask, subtree_size) = (" << cur_task.leaves[i] << ", " << cur_task.leaf_task_ids[i] << ", " << nodes[cur_task.leaves[i] - cur_task.start_id].subtree_size << ")\n";
-    }
 
     int dealt_points = 0;
 
@@ -71,13 +65,10 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
       float size = computeSize(boxes[id], viewpoint);
       bool selected = false, in_fr = in_frustum(boxes[id], this->parent_pe->view_matrix, this->parent_pe->proj_matrix);
 
-      std::cout << "[PE]: id: " << cur_id << ", calculated size: " << size << ", target_size: "
-                << this->parent_pe->target_size << "\n";
-
       if ((size < this->parent_pe->target_size && size > 0 || nodes[id].count_leaf) && in_fr) {
         selected = true;
-        this->cuts_to_submit.emplace(dealt_points * PipelineStage, cur_id);
-        this->parents_to_submit.push(nodes[id].parent_id);
+        this->cuts_to_submit.emplace(dealt_points * PipelineStage, cur_id, nodes[id].start);
+        this->parents_to_submit.push(nodes[id].parent_start);
       } else if (nodes[id].is_task_leaf) {
         this->leaves_to_submit.emplace(dealt_points * PipelineStage, cur_id,
                                        cur_id + nodes[id].subtree_size >= cur_task.start_id + cur_task.task_size);
@@ -90,9 +81,6 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
       }
     }
 
-    std::cout << "[debug]: cuts_to_submit.size() = " << cuts_to_submit.size() << ", leaves_to_submit.size() = "
-              << leaves_to_submit.size() << std::endl;
-
     std::queue<std::tuple<int, int, bool>> tmp;
     while (!leaves_to_submit.empty()) {
       if (leaves_to_submit.size() == 1) {
@@ -100,7 +88,7 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
       } else {
         tmp.emplace(std::get<0>(leaves_to_submit.front()), std::get<1>(leaves_to_submit.front()), false);
       }
-      std::cout << "[debug]: leaf_id = " << std::get<1>(leaves_to_submit.front()) << ", time_stamp = " << std::get<0>(leaves_to_submit.front()) << ", is_end = " << std::get<2>(leaves_to_submit.front()) << "\n";
+
       leaves_to_submit.pop();
     }
 
@@ -120,12 +108,14 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
     if (this->counter % PipelineStage == 0) {
       if (!this->cuts_to_submit.empty()) {
         auto cut = this->cuts_to_submit.front();
+        int time_stamp = std::get<0>(cut), node_id = std::get<1>(cut), start_id = std::get<2>(cut);
         int parent_id = this->parents_to_submit.front();
-        if (this->counter == cut.first) {
+        if (this->counter == time_stamp) {
           this->cuts_to_submit.pop();
           this->parents_to_submit.pop();
 
-          this->parent_pe->render_indices.push_back(cut.second);
+          this->parent_pe->render_indices.push_back(start_id);
+          this->parent_pe->nodes_for_render_indices.push_back(node_id);
           this->parent_pe->parent_indices.push_back(parent_id);
         }
       }
@@ -135,9 +125,6 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
         int time_stamp = std::get<0>(leaf);
         int leaf_id = std::get<1>(leaf);
         bool is_end = std::get<2>(leaf);
-
-        std::cout << "[debug]: leaf_id = " << leaf_id << ", time_stamp = " << time_stamp << ", is_end = " << is_end
-                  << "\n";
 
         if (this->counter >= time_stamp && scheduler.leaf_to_submit.size() < MaxLeafBufferSize) {
           this->leaves_to_submit.pop();

@@ -20,9 +20,7 @@ std::vector<int> reorder_indices;
 std::vector<int> reversed_indices;
 std::unordered_set<int> render_set;
 
-void check() {
-  std::string truth_file = "./to_render_indices.txt";
-  std::string my_file = "./my_to_render.txt";
+void check(std::string truth_file, std::string my_file) {
 
   freopen(truth_file.c_str(), "r", stdin);
   std::vector<int> truth;
@@ -63,7 +61,6 @@ void check() {
       overlap++;
     } else {
       std::cerr << "[ERROR]: mine[" << i << "] = " << mine[i] << " not found by truth\n";
-      exit(0);
     }
   }
 
@@ -159,11 +156,18 @@ void initStage(float *viewpoint) {
   nodes.resize(nodes_size);
   boxes.resize(nodes_size);
   for (int i = 0; i < nodes_size; ++i) {
-    int parent, subtree_size, count_leaf;
+    int parent, subtree_size, count_leaf, start;
     infile.read(reinterpret_cast<char *>(&parent), sizeof(parent));
     infile.read(reinterpret_cast<char *>(&subtree_size), sizeof(subtree_size));
     infile.read(reinterpret_cast<char *>(&count_leaf), sizeof(count_leaf));
-    nodes[i] = {parent, subtree_size, count_leaf};
+    infile.read(reinterpret_cast<char *>(&start), sizeof(start));
+    nodes[i] = {parent, subtree_size, count_leaf, start, 0, false};
+
+    if (i < 32) {
+      std::cout << "nodes[" << i << "]: " << parent << " " << subtree_size << " " << count_leaf << " " << start << '\n';
+    }
+
+    nodes[i].parent_start = nodes[nodes[i].parent_id].start;
 
     Point4 minn, maxx;
     infile.read(reinterpret_cast<char *>(&minn), sizeof(minn));
@@ -174,25 +178,12 @@ void initStage(float *viewpoint) {
       boxes[i].maxx[j] = maxx[j];
     }
 
-    if (reversed_indices[i] == 45) {
-      std::cerr << "i = " << i << "\n";
-      std::cerr << "minn = (" << boxes[i].minn[0] << ", " << boxes[i].minn[1] << ", " << boxes[i].minn[2] << ", " << boxes[i].minn[3] << ")\n";
-      std::cerr << "maxx = (" << boxes[i].maxx[0] << ", " << boxes[i].maxx[1] << ", " << boxes[i].maxx[2] << ", " << boxes[i].maxx[3] << ")\n";
-
-      std::cerr << "subtree_size = " << nodes[i].subtree_size << '\n';
-      std::cerr << "count_leaf = " << nodes[i].count_leaf << '\n';
-
-      std::cerr << "parent = " << reversed_indices[nodes[i].parent_id] << '\n';
-      std::cerr << "size = " << computeSize(boxes[i], {viewpoint[0], viewpoint[1], viewpoint[2]}) << '\n';
-      std::cerr << "parent_size = " << computeSize(boxes[nodes[i].parent_id], {viewpoint[0], viewpoint[1], viewpoint[2]}) << '\n';
-    }
-
   }
 
   infile.close();
 
-  checkOverlap();
-  std::cerr << "[INFO]: pass checkOverlap\n";
+//  checkOverlap();
+//  std::cerr << "[INFO]: pass checkOverlap\n";
 
   for (int i = 0; i < tasks_size; ++i) {
     Task &task = tasks[i];
@@ -222,10 +213,10 @@ int callAccelerator(float target_size,
   std::vector<int> render_indices, nodes_for_render_indices, parent_indices;
   int cycle = 0;
   PE pes[PENum] = {
-          PE(nodes_for_render_indices, parent_indices),
-          PE(nodes_for_render_indices, parent_indices),
-          PE(nodes_for_render_indices, parent_indices),
-          PE(nodes_for_render_indices, parent_indices)
+          PE(render_indices, nodes_for_render_indices, parent_indices),
+          PE(render_indices, nodes_for_render_indices, parent_indices),
+          PE(render_indices, nodes_for_render_indices, parent_indices),
+          PE(render_indices, nodes_for_render_indices, parent_indices)
   };
   for (int i = 0; i < PENum; ++i) {
     pes[i].loadMeta(target_size, viewpoint, view_matrix, proj_matrix);
@@ -241,10 +232,6 @@ int callAccelerator(float target_size,
     scheduler.tasks_loaded_to_cache = dcache.update();
 
     for (auto &loaded_task: scheduler.tasks_loaded_to_cache) {
-      std::cout << "\033[31m[INFO] loaded task: " << loaded_task << "\033[0m\n";
-    }
-
-    for (auto &loaded_task: scheduler.tasks_loaded_to_cache) {
       scheduler.task_queue.push(loaded_task);
     }
 
@@ -257,8 +244,6 @@ int callAccelerator(float target_size,
     }
 
     working |= dcache.busy();
-
-    std::cout << "[INFO] task_queue.size() = " << scheduler.task_queue.size() << "\n";
 
     if (!working && scheduler.task_queue.empty()) {
       break;
@@ -285,6 +270,7 @@ int callAccelerator(float target_size,
   assert(nodes_for_render_indices.size() == parent_indices.size());
 
   for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
+    renderIndices[i] = render_indices[i];
     nodesForRenderIndices[i] = nodes_for_render_indices[i];
     parentIndices[i] = parent_indices[i];
   }
@@ -292,20 +278,23 @@ int callAccelerator(float target_size,
   std::cerr << "total cycles: " << cycle << std::endl;
 
   for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
-    if (reversed_indices[nodesForRenderIndices[i]] == 45) {
-      std::cerr << "i = " << i << "\n";
-      std::cerr << "nodesForRenderIndices[i] = " << nodesForRenderIndices[i] << "\n";
-      std::cerr << "globalParentIndices[i] = " << parentIndices[i] << "\n";
-      std::cerr << "reversed_indices[nodesForRenderIndices[i]] = " << reversed_indices[nodesForRenderIndices[i]] << "\n";
-      std::cerr << "reversed_indices[globalParentIndices[i]] = " << reversed_indices[parentIndices[i]] << "\n";
-    }
     nodesForRenderIndices[i] = reversed_indices[nodesForRenderIndices[i]];
     parentIndices[i] = reversed_indices[parentIndices[i]];
   }
 
-  freopen("my_to_render.txt", "w", stdout);
+  freopen("my_nodes_to_render.txt", "w", stdout);
   for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
     std::cout << nodesForRenderIndices[i] << '\n';
+  }
+
+  freopen("my_parents.txt", "w", stdout);
+  for (int i = 0; i < parent_indices.size(); ++i) {
+    std::cout << parentIndices[i] << '\n';
+  }
+
+  freopen("my_render_indices.txt", "w", stdout);
+  for (int i = 0; i < render_indices.size(); ++i) {
+    std::cout << renderIndices[i] << '\n';
   }
 
   return nodes_for_render_indices.size();
@@ -327,6 +316,8 @@ int main() {
   std::cerr << callAccelerator(target_size, viewpoint, globalRenderIndices, globalNodesForRenderIndices, globalParentIndices, view_matrix, proj_matrix)
             << std::endl;
   fclose(stdout);
-  check();
+  check("./render_indices.txt", "my_render_indices.txt");
+  check("./to_render_indices.txt", "my_nodes_to_render.txt");
+  check("./parent_indices.txt", "my_parents.txt");
   return 0;
 }

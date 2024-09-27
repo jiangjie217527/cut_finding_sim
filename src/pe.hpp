@@ -21,7 +21,7 @@ struct InnerTask {
 
     PE* parent_pe;
 
-    std::queue<std::pair<int, int>> cuts_to_submit;
+    std::queue<std::tuple<int, int, int>> cuts_to_submit; // (time_stamp, nodes_id, start_id)
     std::queue<int> parents_to_submit;
     std::queue<std::tuple<int, int, bool>> leaves_to_submit;
 
@@ -34,6 +34,7 @@ struct PE {
     float target_size;
     float* viewpoint;
     std::vector<int>& render_indices;
+    std::vector<int>& nodes_for_render_indices;
     std::vector<int>& parent_indices;
     const float* view_matrix;
     const float* proj_matrix;
@@ -43,6 +44,7 @@ struct PE {
     bool updateTick(std::queue<int> &task_queue, DCache &dcache, Scheduler &scheduler);
 
     PE(std::vector<int>& render_indices,
+       std::vector<int>& nodes_for_render_indices,
        std::vector<int>& parent_indices);
     void loadMeta(float target_size, 
                   float* viewpoint,
