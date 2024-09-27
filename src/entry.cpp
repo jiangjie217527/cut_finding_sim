@@ -1,8 +1,10 @@
 #include "entry.hpp"
+#include "utils.hpp"
 
 #include <algorithm>
 #include <cstdio>
 #include <iostream>
+#include <string>
 
 Scheduler scheduler;
 DRAM dram;
@@ -17,6 +19,56 @@ std::vector<Box> boxes;
 std::vector<int> reorder_indices;
 std::vector<int> reversed_indices;
 std::unordered_set<int> render_set;
+
+void check() {
+  std::string truth_file = "./to_render_indices.txt";
+  std::string my_file = "./my_to_render.txt";
+
+  freopen(truth_file.c_str(), "r", stdin);
+  std::vector<int> truth;
+  while (true) {
+    int x;
+    if (scanf("%d", &x) == EOF) {
+      break;
+    }
+    truth.push_back(x);
+  }
+
+  freopen(my_file.c_str(), "r", stdin);
+  std::vector<int> mine;
+
+  while (true) {
+    int x;
+    if (scanf("%d", &x) == EOF) {
+      break;
+    }
+    mine.push_back(x);
+  }
+
+
+  std::sort(truth.begin(), truth.end());
+  std::sort(mine.begin(), mine.end());
+
+  std::cout << "mine[0] = " << mine[0] << '\n';
+
+  int overlap = 0;
+  std::unordered_set<int> truth_nodes;
+
+  for (int i = 0; i < truth.size(); ++i) {
+    truth_nodes.insert(truth[i]);
+  }
+
+  for (int i = 0; i < mine.size(); ++i) {
+    if (truth_nodes.find(mine[i]) != truth_nodes.end()) {
+      overlap++;
+    } else {
+      std::cerr << "[ERROR]: mine[" << i << "] = " << mine[i] << " not found by truth\n";
+      exit(0);
+    }
+  }
+
+  std::cerr << "[INFO]: overlap rate = " << overlap << " / " << mine.size() << " = " << overlap * 1.0 / mine.size() << "\n";
+}
 
 void checkNodeOverlap() {
   std::unordered_set<int> indices;
@@ -64,7 +116,7 @@ void checkOverlap() {
   checkTaskOverlap();
 }
 
-void initStage() {
+void initStage(float *viewpoint) {
   size_t max_subtask_size = 0;
 
   std::ifstream infile("reorder.bin", std::ios::binary);
@@ -113,10 +165,6 @@ void initStage() {
     infile.read(reinterpret_cast<char *>(&count_leaf), sizeof(count_leaf));
     nodes[i] = {parent, subtree_size, count_leaf};
 
-    if (reversed_indices[i] < 32) {
-      std::cerr << "[INFO]: node " << reversed_indices[i] << " has parent = " << reversed_indices[parent] << ", subtree_size = " << subtree_size << ", count_leaf = " << count_leaf << "\n";
-    }
-
     Point4 minn, maxx;
     infile.read(reinterpret_cast<char *>(&minn), sizeof(minn));
     infile.read(reinterpret_cast<char *>(&maxx), sizeof(maxx));
@@ -125,6 +173,20 @@ void initStage() {
       boxes[i].minn[j] = minn[j];
       boxes[i].maxx[j] = maxx[j];
     }
+
+    if (reversed_indices[i] == 45) {
+      std::cerr << "i = " << i << "\n";
+      std::cerr << "minn = (" << boxes[i].minn[0] << ", " << boxes[i].minn[1] << ", " << boxes[i].minn[2] << ", " << boxes[i].minn[3] << ")\n";
+      std::cerr << "maxx = (" << boxes[i].maxx[0] << ", " << boxes[i].maxx[1] << ", " << boxes[i].maxx[2] << ", " << boxes[i].maxx[3] << ")\n";
+
+      std::cerr << "subtree_size = " << nodes[i].subtree_size << '\n';
+      std::cerr << "count_leaf = " << nodes[i].count_leaf << '\n';
+
+      std::cerr << "parent = " << reversed_indices[nodes[i].parent_id] << '\n';
+      std::cerr << "size = " << computeSize(boxes[i], {viewpoint[0], viewpoint[1], viewpoint[2]}) << '\n';
+      std::cerr << "parent_size = " << computeSize(boxes[nodes[i].parent_id], {viewpoint[0], viewpoint[1], viewpoint[2]}) << '\n';
+    }
+
   }
 
   infile.close();
@@ -152,7 +214,7 @@ int callAccelerator(float target_size,
                     int *parentIndices,
                     const float *view_matrix,
                     const float *proj_matrix) {
-  initStage();
+  initStage(viewpoint);
 
   printf("Start calling accelerator\n");
 
@@ -229,6 +291,13 @@ int callAccelerator(float target_size,
   std::cerr << "total cycles: " << cycle << std::endl;
 
   for (int i = 0; i < render_indices.size(); ++i) {
+    if (reversed_indices[renderIndices[i]] == 45) {
+      std::cerr << "i = " << i << "\n";
+      std::cerr << "renderIndices[i] = " << renderIndices[i] << "\n";
+      std::cerr << "parentIndices[i] = " << parentIndices[i] << "\n";
+      std::cerr << "reversed_indices[renderIndices[i]] = " << reversed_indices[renderIndices[i]] << "\n";
+      std::cerr << "reversed_indices[parentIndices[i]] = " << reversed_indices[parentIndices[i]] << "\n";
+    }
     renderIndices[i] = reversed_indices[renderIndices[i]];
     parentIndices[i] = reversed_indices[parentIndices[i]];
   }
@@ -249,13 +318,14 @@ int main() {
                            0.00455242, -0.93644, -0.350799, 0.0,
                            -4.4704, 3.9639, -19.0254, 1.0};
   float proj_matrix[16] = {1.00553, 0.0, 0.0, 0.0,
-                           0.0, 1.33695, 0.0, 0.0,
-                           0.0, 0.0, 1.0001, 1.0,
-                           0.0, 0.0, -0.010001, 0.0};
+                                  0.0, 1.33695, 0.0, 0.0,
+                                  0.0, 0.0, 1.0001, 1.0,
+                                  0.0, 0.0, -0.010001, 0.0};
 
   freopen("log.txt", "w", stdout);
   std::cerr << callAccelerator(target_size, viewpoint, renderIndices, parentIndices, view_matrix, proj_matrix)
             << std::endl;
   fclose(stdout);
+  check();
   return 0;
 }

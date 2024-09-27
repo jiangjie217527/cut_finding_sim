@@ -70,12 +70,11 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
       Point viewpoint = {this->parent_pe->viewpoint[0], this->parent_pe->viewpoint[1], this->parent_pe->viewpoint[2]};
       float size = computeSize(boxes[id], viewpoint);
       bool selected = false, in_fr = in_frustum(boxes[id], this->parent_pe->view_matrix, this->parent_pe->proj_matrix);
-      size = in_fr ? size : __FLT_MAX__;
 
       std::cout << "[PE]: id: " << cur_id << ", calculated size: " << size << ", target_size: "
                 << this->parent_pe->target_size << "\n";
 
-      if (size < this->parent_pe->target_size || nodes[id].count_leaf) {
+      if ((size < this->parent_pe->target_size && size > 0 || nodes[id].count_leaf) && in_fr) {
         selected = true;
         this->cuts_to_submit.emplace(dealt_points * PipelineStage, cur_id);
         this->parents_to_submit.push(nodes[id].parent_id);
