@@ -279,7 +279,6 @@ int callAccelerator(float target_size,
 
   for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
     nodesForRenderIndices[i] = reversed_indices[nodesForRenderIndices[i]];
-    parentIndices[i] = reversed_indices[parentIndices[i]];
   }
 
   freopen("my_nodes_to_render.txt", "w", stdout);
