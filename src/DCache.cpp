@@ -154,7 +154,7 @@ std::vector<int> DCache::update() {
         // finish transferring data
         banks[i].busy = false;
         if (banks[i].busy_id != -1) {
-          std::cerr << "detail: (tag, busy_id) = (" << banks[i].tag[banks[i].busy_id] << ", " << banks[i].busy_id << ")\n";
+          // std::cerr << "detail: (tag, busy_id) = (" << banks[i].tag[banks[i].busy_id] << ", " << banks[i].busy_id << ")\n";
           banks[i].valid[banks[i].busy_id] = true;
           banks[i].occupied[banks[i].busy_id] = false;
           res.push_back(banks[i].tag[banks[i].busy_id]);

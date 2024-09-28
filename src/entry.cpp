@@ -228,7 +228,9 @@ int callAccelerator(float target_size,
   size_t prev = 0;
   while (true) {
     cycle++;
-    printf("Cycle: %d\n", cycle);
+    if (cycle % 100000 == 0) {
+      printf("Cycle: %d\n", cycle);
+    }
     scheduler.tasks_loaded_to_cache = dcache.update();
 
     for (auto &loaded_task: scheduler.tasks_loaded_to_cache) {
