@@ -279,3 +279,25 @@ void DCache::printStatus(std::ostream &os) {
   }
 }
 
+void DCache::recycle() {
+  for (int i = 0; i < BankNum; ++i) {
+    for (int j = 0; j < BankSize; ++j) {
+      banks[i].valid[j] = false;
+      banks[i].occupied[j] = false;
+      banks[i].dram_counter[j] = 0;
+      banks[i].tag[j] = 0;
+    }
+
+    banks[i].busy = false;
+    banks[i].busy_id = -1;
+    banks[i].counter = 0;
+  }
+
+  for (int i = 0; i < BufferCacheSize; ++i) {
+    buffer_cache.valid[i] = false;
+    buffer_cache.busy[i] = false;
+    buffer_cache.counter[i] = 0;
+    buffer_cache.tag[i] = 0;
+  }
+}
+

@@ -17,6 +17,7 @@ struct DRAM {
 
     void read(int task_id, Task &task, std::vector<Node> &nodes, std::vector<Box> &boxes) const;
     void init(const std::vector<Node>& nodes, const std::vector<Task>& tasks, const std::vector<Box>& boxes);
+    void print_len();
 };
 
 #endif // HGS_DRAM_HPP_

@@ -6,6 +6,8 @@ InnerTask::InnerTask(int offset, int inner_id, PE *parent_pe) : offset(offset), 
   this->parent_pe = parent_pe;
   this->cur_id = this->inner_id = -1;
   this->cur_time = this->counter = 0;
+  this->cycle = 0;
+  this->busy = false;
 }
 
 PE::PE(std::vector<int> &render_indices,

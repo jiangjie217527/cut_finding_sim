@@ -20,6 +20,19 @@ std::vector<int> reorder_indices;
 std::vector<int> reversed_indices;
 std::unordered_set<int> render_set;
 
+void multi(){
+	std::cout<<"render_set.size:"<<render_set.size()<<std::endl;
+	std::cout<<"tasks.size:"<<tasks.size()<<std::endl;
+	scheduler.print_len();
+	dram.print_len();
+}
+
+void recycle() {
+  render_set.clear();
+  scheduler.recycle();
+  dcache.recycle();
+}
+
 void check(std::string truth_file, std::string my_file) {
 
   freopen(truth_file.c_str(), "r", stdin);
@@ -114,6 +127,12 @@ void checkOverlap() {
 }
 
 void initStage(float *viewpoint) {
+  if (!tasks.empty()) {
+    std::cout << "[reuse]: tasks.size() = " << tasks.size() << '\n';
+
+    return;
+  }
+
   size_t max_subtask_size = 0;
 
   std::ifstream infile("reorder.bin", std::ios::binary);
@@ -221,7 +240,7 @@ int callAccelerator(float target_size,
   for (int i = 0; i < PENum; ++i) {
     pes[i].loadMeta(target_size, viewpoint, view_matrix, proj_matrix);
   }
-
+  multi();
   scheduler.task_queue.push(0);
   dcache.cachePrefillData(0, dram);
 
@@ -247,7 +266,7 @@ int callAccelerator(float target_size,
 
     working |= dcache.busy();
 
-    if (!working && scheduler.task_queue.empty()) {
+    if (!working) {
       break;
     }
 
@@ -263,7 +282,7 @@ int callAccelerator(float target_size,
     prev = nodes_for_render_indices.size();
   }
 
-  dcache.printStatus(std::cerr);
+  // dcache.printStatus(std::cerr);
 
   // make sure nodes_for_render_indices is unique
   std::sort(nodes_for_render_indices.begin(), nodes_for_render_indices.end());
@@ -283,20 +302,7 @@ int callAccelerator(float target_size,
     nodesForRenderIndices[i] = reversed_indices[nodesForRenderIndices[i]];
   }
 
-  freopen("my_nodes_to_render.txt", "w", stdout);
-  for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
-    std::cout << nodesForRenderIndices[i] << '\n';
-  }
-
-  freopen("my_parents.txt", "w", stdout);
-  for (int i = 0; i < parent_indices.size(); ++i) {
-    std::cout << parentIndices[i] << '\n';
-  }
-
-  freopen("my_render_indices.txt", "w", stdout);
-  for (int i = 0; i < render_indices.size(); ++i) {
-    std::cout << renderIndices[i] << '\n';
-  }
+  recycle();
 
   return nodes_for_render_indices.size();
 }

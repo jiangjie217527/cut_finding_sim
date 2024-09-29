@@ -39,8 +39,6 @@ struct PE {
     const float* view_matrix;
     const float* proj_matrix;
 
-    int cur_tick = 0;
-
     bool updateTick(std::queue<int> &task_queue, DCache &dcache, Scheduler &scheduler);
 
     PE(std::vector<int>& render_indices,
