@@ -13,6 +13,7 @@ void initStage();
 
 int callAccelerator(float target_size,
                      float* viewpoint,
+                     int* renderIndices,
                      int* nodesForRenderIndices,
                      int* parent_indices,
                      const float* view_matrix,
