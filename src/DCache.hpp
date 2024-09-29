@@ -46,6 +46,7 @@ struct DCache {
     void loadBufferCache();
     void printStatus(std::ostream &os);
     bool busy();
+    void recycle();
 };
 
 #endif // HGS_DCache_HPP_

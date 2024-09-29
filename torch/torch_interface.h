@@ -8,6 +8,7 @@ int MyExpandToSize(
     float target_size,
     torch::Tensor& viewpoint,
     torch::Tensor& render_indices,
+    torch::Tensor& nodes_for_render_indices,
     torch::Tensor& parent_indices,
     torch::Tensor& view_matrix,
     torch::Tensor& proj_matrix

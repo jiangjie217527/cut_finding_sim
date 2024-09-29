@@ -154,7 +154,7 @@ std::vector<int> DCache::update() {
         // finish transferring data
         banks[i].busy = false;
         if (banks[i].busy_id != -1) {
-          std::cerr << "detail: (tag, busy_id) = (" << banks[i].tag[banks[i].busy_id] << ", " << banks[i].busy_id << ")\n";
+          // std::cerr << "detail: (tag, busy_id) = (" << banks[i].tag[banks[i].busy_id] << ", " << banks[i].busy_id << ")\n";
           banks[i].valid[banks[i].busy_id] = true;
           banks[i].occupied[banks[i].busy_id] = false;
           res.push_back(banks[i].tag[banks[i].busy_id]);
@@ -276,6 +276,28 @@ void DCache::printStatus(std::ostream &os) {
 
     os << "tag = " << buffer_cache.tag[i] << ", ";
     os << "counter = " << buffer_cache.counter[i] << "\n";
+  }
+}
+
+void DCache::recycle() {
+  for (int i = 0; i < BankNum; ++i) {
+    for (int j = 0; j < BankSize; ++j) {
+      banks[i].valid[j] = false;
+      banks[i].occupied[j] = false;
+      banks[i].dram_counter[j] = 0;
+      banks[i].tag[j] = 0;
+    }
+
+    banks[i].busy = false;
+    banks[i].busy_id = -1;
+    banks[i].counter = 0;
+  }
+
+  for (int i = 0; i < BufferCacheSize; ++i) {
+    buffer_cache.valid[i] = false;
+    buffer_cache.busy[i] = false;
+    buffer_cache.counter[i] = 0;
+    buffer_cache.tag[i] = 0;
   }
 }
 
