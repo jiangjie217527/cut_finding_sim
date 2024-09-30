@@ -13,6 +13,16 @@ DCache dcache;
 constexpr int maxn = 8e6;
 int globalNodesForRenderIndices[maxn], globalParentIndices[maxn], globalRenderIndices[maxn];
 
+struct FinishInformation {
+    int node_for_render_index;
+    int parent_index;
+    int render_index;
+
+    friend bool operator<(const FinishInformation &a, const FinishInformation &b) {
+        return a.node_for_render_index < b.node_for_render_index;
+    }
+} finishInformation[maxn];
+
 std::vector<Task> tasks;
 std::vector<Node> nodes;
 std::vector<Box> boxes;
@@ -303,6 +313,15 @@ int callAccelerator(float target_size,
 
   for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
     nodesForRenderIndices[i] = reversed_indices[nodesForRenderIndices[i]];
+    finishInformation[i] = {nodesForRenderIndices[i], parent_indices[i], render_indices[i]};
+  }
+
+  std::sort(finishInformation, finishInformation + nodes_for_render_indices.size());
+
+  for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
+    nodesForRenderIndices[i] = finishInformation[i].node_for_render_index;
+    parentIndices[i] = finishInformation[i].parent_index;
+    renderIndices[i] = finishInformation[i].render_index;
   }
 
   recycle();
@@ -313,23 +332,23 @@ int callAccelerator(float target_size,
 int main() {
   float target_size = 0.022588656707277704;
   float viewpoint[] = {-45.02200698852539062500, 63.64959716796875000000,
-                        8.60590744018554687500};
+                       8.60590744018554687500};
   float view_matrix[] = {-2.00151070952415466309e-01, -4.04376387596130371094e-01,
-                           8.92423272132873535156e-01, 0.00000000000000000000e+00,
-                           -9.79656815528869628906e-01, 9.61357727646827697754e-02,
-                           -1.76154449582099914551e-01, 0.00000000000000000000e+00,
-                           -1.45611055195331573486e-02, -9.09526050090789794922e-01,
-                           -4.15391772985458374023e-01, 0.00000000000000000000e+00,
-                           5.34688682556152343750e+01, -1.64975414276123046875e+01,
-                           5.49656677246093750000e+01, 1.00000000000000000000e+00};
+                         8.92423272132873535156e-01, 0.00000000000000000000e+00,
+                         -9.79656815528869628906e-01, 9.61357727646827697754e-02,
+                         -1.76154449582099914551e-01, 0.00000000000000000000e+00,
+                         -1.45611055195331573486e-02, -9.09526050090789794922e-01,
+                         -4.15391772985458374023e-01, 0.00000000000000000000e+00,
+                         5.34688682556152343750e+01, -1.64975414276123046875e+01,
+                         5.49656677246093750000e+01, 1.00000000000000000000e+00};
   float proj_matrix[] = {0.95111346244812011719, 0.00000000000000000000,
-                           0.00000000000000000000, 0.00000000000000000000,
-                           0.00000000000000000000, 1.41185545921325683594,
-                           0.00000000000000000000, 0.00000000000000000000,
-                           0.00000000000000000000, 0.00000000000000000000,
-                           1.00010001659393310547, 1.00000000000000000000,
-                           0.00000000000000000000, 0.00000000000000000000,
-                           -0.01000100001692771912, 0.00000000000000000000};
+                         0.00000000000000000000, 0.00000000000000000000,
+                         0.00000000000000000000, 1.41185545921325683594,
+                         0.00000000000000000000, 0.00000000000000000000,
+                         0.00000000000000000000, 0.00000000000000000000,
+                         1.00010001659393310547, 1.00000000000000000000,
+                         0.00000000000000000000, 0.00000000000000000000,
+                         -0.01000100001692771912, 0.00000000000000000000};
   int to_render = callAccelerator(target_size, viewpoint, globalRenderIndices, globalNodesForRenderIndices,
                                   globalParentIndices, view_matrix, proj_matrix);
   freopen("log.txt", "w", stdout);
