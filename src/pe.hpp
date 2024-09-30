@@ -27,6 +27,7 @@ struct InnerTask {
 
     InnerTask(int offset = -1, int inner_id = -1, PE* parent_pe = nullptr);
     bool updateTick(std::queue<int> &task_queue, DCache &dcache, Scheduler &scheduler);
+    bool isBusy() const;
 };
 
 struct PE {
@@ -48,6 +49,8 @@ struct PE {
                   float* viewpoint,
                   const float* view_matrix,
                   const float* proj_matrix);
+
+    bool isBusy();
 };
 
 #endif // HGS_PE_HPP_

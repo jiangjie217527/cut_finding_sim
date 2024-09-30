@@ -182,10 +182,6 @@ void initStage(float *viewpoint) {
     infile.read(reinterpret_cast<char *>(&start), sizeof(start));
     nodes[i] = {parent, subtree_size, count_leaf, start, 0, false};
 
-    if (i < 32) {
-      std::cout << "nodes[" << i << "]: " << parent << " " << subtree_size << " " << count_leaf << " " << start << '\n';
-    }
-
     nodes[i].parent_start = nodes[nodes[i].parent_id].start;
 
     Point4 minn, maxx;
@@ -258,13 +254,19 @@ int callAccelerator(float target_size,
 
     bool working = false;
 
-    working |= scheduler.schedule(dcache, dram);
+    scheduler.schedule(dcache, dram);
 
     for (int i = 0; i < PENum; ++i) {
-      working |= pes[i].updateTick(scheduler.task_queue, dcache, scheduler);
+      pes[i].updateTick(scheduler.task_queue, dcache, scheduler);
     }
 
-    working |= dcache.busy();
+    working |= dcache.isBusy();
+
+    for (int i = 0; i < PENum; ++i) {
+      working |= pes[i].isBusy();
+    }
+
+    working |= scheduler.isBusy();
 
     if (!working) {
       break;

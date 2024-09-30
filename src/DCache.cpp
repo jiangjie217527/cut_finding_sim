@@ -7,7 +7,7 @@ int divUpperBound(int a, int b) {
   return (a + b - 1) / b;
 }
 
-bool DCache::busy() {
+bool DCache::isBusy() {
   for (int i = 0; i < BankNum; ++i) {
     for (int j = 0; j < BankSize; ++j) {
       if (banks[i].occupied[j]) {
@@ -213,7 +213,7 @@ void DCache::loadBufferCache() {
       continue;
     }
 
-    // now we're sure that the bank isn't busy, can fill the data
+    // now we're sure that the bank isn't isBusy, can fill the data
     for (int j = 0; j < BankSize; ++j) {
       if (!banks[bank_id].valid[j] && !banks[bank_id].occupied[j]) {
         banks[bank_id].tag[j] = buffer_cache.tag[i];
@@ -269,9 +269,9 @@ void DCache::printStatus(std::ostream &os) {
     }
 
     if (buffer_cache.busy[i]) {
-      os << "busy, ";
+      os << "isBusy, ";
     } else {
-      os << "not busy, ";
+      os << "not isBusy, ";
     }
 
     os << "tag = " << buffer_cache.tag[i] << ", ";

@@ -20,8 +20,12 @@ struct Scheduler {
     std::vector<int> tasks_loaded_to_cache;
 
     bool schedule(DCache &dcache, DRAM &dram);
+
     void recycle();
+
     void print_len();
+
+    bool isBusy();
 };
 
 #endif // HGS_SCHEDULER_HPP_

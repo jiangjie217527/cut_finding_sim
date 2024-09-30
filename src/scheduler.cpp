@@ -81,3 +81,7 @@ void Scheduler::print_len(){
 	std::cout<<task_queue.size()<<std::endl<<leaf_to_submit.size()<<std::endl<<tasks_to_submit.size()<<std::endl<<if_leaves_submitted.size()<<std::endl<<tasks_waitlist.size()<<tasks_loaded_to_cache.size()<<std::endl;
 	std::cout<<"end scheduler print()"<<std::endl;
 }
+
+bool Scheduler::isBusy() {
+  return !task_queue.empty() || !leaf_to_submit.empty() || !tasks_to_submit.empty() || !tasks_waitlist.empty();
+}
