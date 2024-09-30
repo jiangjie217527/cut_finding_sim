@@ -6,24 +6,27 @@ InnerTask::InnerTask(int offset, int inner_id, PE *parent_pe) : offset(offset), 
   this->parent_pe = parent_pe;
   this->cur_id = this->inner_id = -1;
   this->cur_time = this->counter = 0;
+  this->cycle = 0;
+  this->busy = false;
 }
 
 PE::PE(std::vector<int> &render_indices,
        std::vector<int> &nodes_for_render_indices,
-       std::vector<int> &parent_indices) : render_indices(render_indices), nodes_for_render_indices(nodes_for_render_indices), parent_indices(parent_indices) {
+       std::vector<int> &parent_indices) : render_indices(render_indices),
+                                           nodes_for_render_indices(nodes_for_render_indices),
+                                           parent_indices(parent_indices) {
   for (int i = 0; i < PipelineStage; ++i) {
     inner_tasks[i] = InnerTask(i, i, this);
   }
 }
 
 bool PE::updateTick(std::queue<int> &task_queue, DCache &dcache, Scheduler &scheduler) {
-//    printf("[PE]: updateTick\n");
-  bool res = false;
+  bool busy = false;
   for (int i = 0; i < PipelineStage; ++i) {
-    res |= inner_tasks[i].updateTick(task_queue, dcache, scheduler);
+    busy |= inner_tasks[i].updateTick(task_queue, dcache, scheduler);
   }
 
-  return res;
+  return busy;
 }
 
 bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Scheduler &scheduler) {
@@ -65,10 +68,11 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
       float size = computeSize(boxes[id], viewpoint);
       bool selected = false, in_fr = in_frustum(boxes[id], this->parent_pe->view_matrix, this->parent_pe->proj_matrix);
 
-      if ((size < this->parent_pe->target_size && size > 0 || nodes[id].count_leaf) && in_fr) {
+      if (((size < this->parent_pe->target_size && size > 0) || nodes[id].count_leaf) && in_fr) {
         selected = true;
         this->cuts_to_submit.emplace(dealt_points * PipelineStage, cur_id, nodes[id].start);
         this->parents_to_submit.push(nodes[id].parent_start);
+
       } else if (nodes[id].is_task_leaf) {
         this->leaves_to_submit.emplace(dealt_points * PipelineStage, cur_id,
                                        cur_id + nodes[id].subtree_size >= cur_task.start_id + cur_task.task_size);
@@ -160,4 +164,22 @@ void PE::loadMeta(float _target_size,
   this->viewpoint = _viewpoint;
   this->view_matrix = _view_matrix;
   this->proj_matrix = _proj_matrix;
+}
+
+bool PE::isBusy() {
+  for (int i = 0; i < PipelineStage; ++i) {
+    if (inner_tasks[i].isBusy()) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool InnerTask::isBusy() const {
+  if (this->busy) {
+    return true;
+  }
+
+  return this->inner_id != -1;
 }

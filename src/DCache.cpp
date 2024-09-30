@@ -7,7 +7,7 @@ int divUpperBound(int a, int b) {
   return (a + b - 1) / b;
 }
 
-bool DCache::busy() {
+bool DCache::isBusy() {
   for (int i = 0; i < BankNum; ++i) {
     for (int j = 0; j < BankSize; ++j) {
       if (banks[i].occupied[j]) {
@@ -213,7 +213,7 @@ void DCache::loadBufferCache() {
       continue;
     }
 
-    // now we're sure that the bank isn't busy, can fill the data
+    // now we're sure that the bank isn't isBusy, can fill the data
     for (int j = 0; j < BankSize; ++j) {
       if (!banks[bank_id].valid[j] && !banks[bank_id].occupied[j]) {
         banks[bank_id].tag[j] = buffer_cache.tag[i];
@@ -269,13 +269,35 @@ void DCache::printStatus(std::ostream &os) {
     }
 
     if (buffer_cache.busy[i]) {
-      os << "busy, ";
+      os << "isBusy, ";
     } else {
-      os << "not busy, ";
+      os << "not isBusy, ";
     }
 
     os << "tag = " << buffer_cache.tag[i] << ", ";
     os << "counter = " << buffer_cache.counter[i] << "\n";
+  }
+}
+
+void DCache::recycle() {
+  for (int i = 0; i < BankNum; ++i) {
+    for (int j = 0; j < BankSize; ++j) {
+      banks[i].valid[j] = false;
+      banks[i].occupied[j] = false;
+      banks[i].dram_counter[j] = 0;
+      banks[i].tag[j] = 0;
+    }
+
+    banks[i].busy = false;
+    banks[i].busy_id = -1;
+    banks[i].counter = 0;
+  }
+
+  for (int i = 0; i < BufferCacheSize; ++i) {
+    buffer_cache.valid[i] = false;
+    buffer_cache.busy[i] = false;
+    buffer_cache.counter[i] = 0;
+    buffer_cache.tag[i] = 0;
   }
 }
 
