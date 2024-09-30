@@ -12,7 +12,9 @@ InnerTask::InnerTask(int offset, int inner_id, PE *parent_pe) : offset(offset), 
 
 PE::PE(std::vector<int> &render_indices,
        std::vector<int> &nodes_for_render_indices,
-       std::vector<int> &parent_indices) : render_indices(render_indices), nodes_for_render_indices(nodes_for_render_indices), parent_indices(parent_indices) {
+       std::vector<int> &parent_indices) : render_indices(render_indices),
+                                           nodes_for_render_indices(nodes_for_render_indices),
+                                           parent_indices(parent_indices) {
   for (int i = 0; i < PipelineStage; ++i) {
     inner_tasks[i] = InnerTask(i, i, this);
   }
@@ -70,6 +72,7 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
         selected = true;
         this->cuts_to_submit.emplace(dealt_points * PipelineStage, cur_id, nodes[id].start);
         this->parents_to_submit.push(nodes[id].parent_start);
+
       } else if (nodes[id].is_task_leaf) {
         this->leaves_to_submit.emplace(dealt_points * PipelineStage, cur_id,
                                        cur_id + nodes[id].subtree_size >= cur_task.start_id + cur_task.task_size);

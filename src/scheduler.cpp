@@ -76,10 +76,13 @@ void Scheduler::recycle() {
   tasks_loaded_to_cache.clear();
 }
 
-void Scheduler::print_len(){
-	std::cout<<"scheduler print()"<<std::endl;
-	std::cout<<task_queue.size()<<std::endl<<leaf_to_submit.size()<<std::endl<<tasks_to_submit.size()<<std::endl<<if_leaves_submitted.size()<<std::endl<<tasks_waitlist.size()<<tasks_loaded_to_cache.size()<<std::endl;
-	std::cout<<"end scheduler print()"<<std::endl;
+void Scheduler::print_len() {
+  std::cout << "scheduler print()" << std::endl;
+  std::cout << task_queue.size() << std::endl << leaf_to_submit.size() << std::endl << tasks_to_submit.size()
+            << std::endl << if_leaves_submitted.size() << std::endl
+            << tasks_waitlist.size()
+            << tasks_loaded_to_cache.size() << std::endl;
+  std::cout << "end scheduler print()" << std::endl;
 }
 
 bool Scheduler::isBusy() {

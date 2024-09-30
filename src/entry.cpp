@@ -19,7 +19,7 @@ struct FinishInformation {
     int render_index;
 
     friend bool operator<(const FinishInformation &a, const FinishInformation &b) {
-        return a.node_for_render_index < b.node_for_render_index;
+      return a.node_for_render_index < b.node_for_render_index;
     }
 } finishInformation[maxn];
 
@@ -247,7 +247,7 @@ int callAccelerator(float target_size,
   for (int i = 0; i < PENum; ++i) {
     pes[i].loadMeta(target_size, viewpoint, view_matrix, proj_matrix);
   }
-  multi();
+
   scheduler.task_queue.push(0);
   dcache.cachePrefillData(0, dram);
 
@@ -298,11 +298,6 @@ int callAccelerator(float target_size,
   // dcache.printStatus(std::cerr);
 
   // make sure nodes_for_render_indices is unique
-  std::sort(nodes_for_render_indices.begin(), nodes_for_render_indices.end());
-  nodes_for_render_indices.erase(std::unique(nodes_for_render_indices.begin(), nodes_for_render_indices.end()),
-                                 nodes_for_render_indices.end());
-  std::cerr << "[INFO] nodes_for_render_indices.size() = " << nodes_for_render_indices.size() << "\n";
-  assert(nodes_for_render_indices.size() == parent_indices.size());
 
   for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
     renderIndices[i] = render_indices[i];
@@ -323,12 +318,6 @@ int callAccelerator(float target_size,
     nodesForRenderIndices[i] = finishInformation[i].node_for_render_index;
     parentIndices[i] = finishInformation[i].parent_index;
     renderIndices[i] = finishInformation[i].render_index;
-
-    if (nodesForRenderIndices[i] == 18) {
-      std::cerr << "nodesForRenderIndices[" << i << "] = " << nodesForRenderIndices[i] << '\n';
-      std::cerr << "parentIndices[" << i << "] = " << parentIndices[i] << '\n';
-      std::cerr << "renderIndices[" << i << "] = " << renderIndices[i] << '\n';
-    }
   }
 
   recycle();
