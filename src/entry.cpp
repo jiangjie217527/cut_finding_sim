@@ -192,8 +192,6 @@ void initStage(float *viewpoint) {
     infile.read(reinterpret_cast<char *>(&start), sizeof(start));
     nodes[i] = {parent, subtree_size, count_leaf, start, 0, false};
 
-    nodes[i].parent_start = nodes[nodes[i].parent_id].start;
-
     Point4 minn, maxx;
     infile.read(reinterpret_cast<char *>(&minn), sizeof(minn));
     infile.read(reinterpret_cast<char *>(&maxx), sizeof(maxx));
@@ -202,7 +200,10 @@ void initStage(float *viewpoint) {
       boxes[i].minn[j] = minn[j];
       boxes[i].maxx[j] = maxx[j];
     }
+  }
 
+  for (int i = 0; i < nodes_size; ++i) {
+    nodes[i].parent_start = nodes[nodes[i].parent_id].start;
   }
 
   infile.close();
@@ -322,6 +323,12 @@ int callAccelerator(float target_size,
     nodesForRenderIndices[i] = finishInformation[i].node_for_render_index;
     parentIndices[i] = finishInformation[i].parent_index;
     renderIndices[i] = finishInformation[i].render_index;
+
+    if (nodesForRenderIndices[i] == 18) {
+      std::cerr << "nodesForRenderIndices[" << i << "] = " << nodesForRenderIndices[i] << '\n';
+      std::cerr << "parentIndices[" << i << "] = " << parentIndices[i] << '\n';
+      std::cerr << "renderIndices[" << i << "] = " << renderIndices[i] << '\n';
+    }
   }
 
   recycle();
