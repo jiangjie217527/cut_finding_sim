@@ -23,9 +23,9 @@ struct Scheduler {
 
     void recycle();
 
-    void print_len();
+    void print_len() const;
 
-    bool isBusy();
+    bool isBusy() const;
 };
 
 #endif // HGS_SCHEDULER_HPP_

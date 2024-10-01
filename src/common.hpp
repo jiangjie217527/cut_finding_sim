@@ -7,7 +7,9 @@
 #include "half.hpp"
 #include "types.hpp"
 
-constexpr int PipelineStage = 12;
+constexpr int PipelineStage = 18;
+constexpr int CutSelectStage = 12;
+constexpr int WeightCalcStage = PipelineStage - CutSelectStage;
 constexpr int DRAMWordsPerCycle = 4;
 constexpr int TaskQueueSize = 12;
 constexpr int PENum = 4;

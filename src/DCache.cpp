@@ -25,7 +25,7 @@ bool DCache::isBusy() {
   return false;
 }
 
-bool DCache::readData(int task_id, Task &task, std::vector<Node> &nodes, std::vector<Box> &boxes) {
+bool DCache::readData(int task_id, Task &task, std::vector<Node> &nodes, std::vector<Box> &boxes, Box &root_father_box) {
   int bank_id = task_id % BankNum;
 
   if (banks[bank_id].busy) {
@@ -35,6 +35,7 @@ bool DCache::readData(int task_id, Task &task, std::vector<Node> &nodes, std::ve
   for (int i = 0; i < BankSize; ++i) {
     if (banks[bank_id].tag[i] == task_id && banks[bank_id].valid[i]) {
       task = banks[bank_id].data[i].task;
+      root_father_box = banks[bank_id].data[i].task.root_father_box;
       for (int j = 0; j < task.task_size; ++j) {
         nodes.push_back(banks[bank_id].data[i].node[j]);
         boxes.push_back(banks[bank_id].data[i].box[j]);
@@ -299,5 +300,17 @@ void DCache::recycle() {
     buffer_cache.counter[i] = 0;
     buffer_cache.tag[i] = 0;
   }
+}
+
+void DCache::writeBackSize(int task_id, int node_relevant_id, float size) {
+  int bank_id = task_id % BankNum;
+
+  for (int i = 0; i < BankSize; ++i) {
+    if (banks[bank_id].tag[i] == task_id && banks[bank_id].valid[i]) {
+      banks[bank_id].data[i].node[node_relevant_id].size = size;
+      return;
+    }
+  }
+
 }
 

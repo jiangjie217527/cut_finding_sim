@@ -2,7 +2,7 @@
 #include "common.hpp"
 #include "utils.hpp"
 
-InnerTask::InnerTask(int offset, int inner_id, PE *parent_pe) : offset(offset), inner_id(inner_id) {
+InnerTask::InnerTask(int offset, int inner_id, PE *parent_pe) : inner_id(inner_id), offset(offset) {
   this->parent_pe = parent_pe;
   this->cur_id = this->inner_id = -1;
   this->cur_time = this->counter = 0;
@@ -12,9 +12,13 @@ InnerTask::InnerTask(int offset, int inner_id, PE *parent_pe) : offset(offset), 
 
 PE::PE(std::vector<int> &render_indices,
        std::vector<int> &nodes_for_render_indices,
-       std::vector<int> &parent_indices) : render_indices(render_indices),
-                                           nodes_for_render_indices(nodes_for_render_indices),
-                                           parent_indices(parent_indices) {
+       std::vector<int> &parent_indices,
+       std::vector<float> &ts,
+       std::vector<int> &kids) : render_indices(render_indices),
+                                 nodes_for_render_indices(nodes_for_render_indices),
+                                 parent_indices(parent_indices),
+                                 ts(ts),
+                                 kids(kids) {
   for (int i = 0; i < PipelineStage; ++i) {
     inner_tasks[i] = InnerTask(i, i, this);
   }
@@ -22,8 +26,8 @@ PE::PE(std::vector<int> &render_indices,
 
 bool PE::updateTick(std::queue<int> &task_queue, DCache &dcache, Scheduler &scheduler) {
   bool busy = false;
-  for (int i = 0; i < PipelineStage; ++i) {
-    busy |= inner_tasks[i].updateTick(task_queue, dcache, scheduler);
+  for (auto & inner_task : inner_tasks) {
+    busy |= inner_task.updateTick(task_queue, dcache, scheduler);
   }
 
   return busy;
@@ -49,8 +53,9 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
 
     std::vector<Node> nodes;
     std::vector<Box> boxes;
+    Box root_father_box{};
 
-    if (!dcache.readData(inner_id, this->cur_task, nodes, boxes)) {
+    if (!dcache.readData(inner_id, this->cur_task, nodes, boxes, root_father_box)) {
       return true; // bank conflict
     }
 
@@ -66,17 +71,36 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
       int id = cur_id - cur_task.start_id;
       Point viewpoint = {this->parent_pe->viewpoint[0], this->parent_pe->viewpoint[1], this->parent_pe->viewpoint[2]};
       float size = computeSize(boxes[id], viewpoint);
+      nodes[id].size = size;
       bool selected = false, in_fr = in_frustum(boxes[id], this->parent_pe->view_matrix, this->parent_pe->proj_matrix);
 
-      if (((size < this->parent_pe->target_size && size > 0) || nodes[id].count_leaf) && in_fr) {
+      if (((size < this->parent_pe->target_size && size > 0) || nodes[id].count_leaf) && in_fr) { // select this point!
         selected = true;
-        this->cuts_to_submit.emplace(dealt_points * PipelineStage, cur_id, nodes[id].start);
+        this->cuts_to_submit.emplace((dealt_points -1) * PipelineStage + CutSelectStage, cur_id, nodes[id].start);
         this->parents_to_submit.push(nodes[id].parent_start);
 
+        int parent_id = nodes[id].parent_id - cur_task.start_id;
+        float weight;
+        Box parent_box = parent_id >= 0 ? boxes[parent_id] : root_father_box;
+        int num_kids = parent_id >= 0 ? nodes[parent_id].num_siblings : cur_task.root_father_children_num;
+        float parent_size = computeSize(parent_box, viewpoint);
+        if (parent_size > 2.0f * this->parent_pe->target_size) {
+          weight = 1.0f;
+        } else {
+          float start = std::max(0.5f * parent_size, size);
+          float diff = parent_size - start;
+          assert(diff > 0);
+          weight = std::max(1.0f - (std::max(0.0f, this->parent_pe->target_size - start) / diff), 0.0f);
+        }
+
+        this->weight_to_submit.emplace(dealt_points * PipelineStage, weight, num_kids);
       } else if (nodes[id].is_task_leaf) {
-        this->leaves_to_submit.emplace(dealt_points * PipelineStage, cur_id,
+        this->leaves_to_submit.emplace((dealt_points -1) * PipelineStage + CutSelectStage, cur_id,
                                        cur_id + nodes[id].subtree_size >= cur_task.start_id + cur_task.task_size);
       }
+
+      // write your size back to DCache
+      dcache.writeBackSize(inner_id, id, size);
 
       if (selected || !in_fr) {
         cur_id += nodes[id].subtree_size;
@@ -109,7 +133,7 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
   } else if (this->cur_time > 0) {
     this->counter++;
 
-    if (this->counter % PipelineStage == 0) {
+    if (this->counter % PipelineStage == CutSelectStage) {
       if (!this->cuts_to_submit.empty()) {
         auto cut = this->cuts_to_submit.front();
         int time_stamp = std::get<0>(cut), node_id = std::get<1>(cut), start_id = std::get<2>(cut);
@@ -135,6 +159,21 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
 
           // submit leaf_id to scheduler
           scheduler.leaf_to_submit.emplace(this->inner_id, this->cycle, leaf_id, is_end);
+        }
+      }
+    }
+
+    if (this->counter % PipelineStage == 0) {
+      if (!this->weight_to_submit.empty()) {
+        auto weight = this->weight_to_submit.front();
+        int time_stamp = std::get<0>(weight);
+        float w = std::get<1>(weight);
+        int children_num = std::get<2>(weight);
+
+        if (this->counter == time_stamp) {
+          this->weight_to_submit.pop();
+          this->parent_pe->ts.push_back(w);
+          this->parent_pe->kids.push_back(children_num);
         }
       }
     }
@@ -167,8 +206,8 @@ void PE::loadMeta(float _target_size,
 }
 
 bool PE::isBusy() {
-  for (int i = 0; i < PipelineStage; ++i) {
-    if (inner_tasks[i].isBusy()) {
+  for (const auto & inner_task : inner_tasks) {
+    if (inner_task.isBusy()) {
       return true;
     }
   }

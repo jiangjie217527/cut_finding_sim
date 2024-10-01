@@ -11,12 +11,15 @@ DRAM dram;
 DCache dcache;
 
 constexpr int maxn = 8e6;
-int globalNodesForRenderIndices[maxn], globalParentIndices[maxn], globalRenderIndices[maxn];
+int globalNodesForRenderIndices[maxn], globalParentIndices[maxn], globalRenderIndices[maxn], globalKids[maxn];
+float globalTS[maxn];
 
 struct FinishInformation {
     int node_for_render_index;
     int parent_index;
     int render_index;
+    float weight;
+    int children_num;
 
     friend bool operator<(const FinishInformation &a, const FinishInformation &b) {
       return a.node_for_render_index < b.node_for_render_index;
@@ -230,6 +233,8 @@ int callAccelerator(float target_size,
                     int *renderIndices,
                     int *nodesForRenderIndices,
                     int *parentIndices,
+                    float *TS,
+                    int *Kids,
                     const float *view_matrix,
                     const float *proj_matrix) {
   initStage(viewpoint);
@@ -237,12 +242,14 @@ int callAccelerator(float target_size,
   printf("Start calling accelerator\n");
 
   std::vector<int> render_indices, nodes_for_render_indices, parent_indices;
+  std::vector<float> ts;
+  std::vector<int> kids;
   int cycle = 0;
   PE pes[PENum] = {
-          PE(render_indices, nodes_for_render_indices, parent_indices),
-          PE(render_indices, nodes_for_render_indices, parent_indices),
-          PE(render_indices, nodes_for_render_indices, parent_indices),
-          PE(render_indices, nodes_for_render_indices, parent_indices)
+          PE(render_indices, nodes_for_render_indices, parent_indices, ts, kids),
+          PE(render_indices, nodes_for_render_indices, parent_indices, ts, kids),
+          PE(render_indices, nodes_for_render_indices, parent_indices, ts, kids),
+          PE(render_indices, nodes_for_render_indices, parent_indices, ts, kids),
   };
   for (int i = 0; i < PENum; ++i) {
     pes[i].loadMeta(target_size, viewpoint, view_matrix, proj_matrix);
@@ -294,22 +301,21 @@ int callAccelerator(float target_size,
 
     prev = nodes_for_render_indices.size();
   }
-
-  // dcache.printStatus(std::cerr);
-
   // make sure nodes_for_render_indices is unique
 
   for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
     renderIndices[i] = render_indices[i];
     nodesForRenderIndices[i] = nodes_for_render_indices[i];
     parentIndices[i] = parent_indices[i];
+    TS[i] = ts[i];
+    Kids[i] = kids[i];
   }
 
   std::cerr << "total cycles: " << cycle << std::endl;
 
   for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
     nodesForRenderIndices[i] = reversed_indices[nodesForRenderIndices[i]];
-    finishInformation[i] = {nodesForRenderIndices[i], parent_indices[i], render_indices[i]};
+    finishInformation[i] = {nodesForRenderIndices[i], parent_indices[i], render_indices[i], ts[i], kids[i]};
   }
 
   std::sort(finishInformation, finishInformation + nodes_for_render_indices.size());
@@ -318,6 +324,8 @@ int callAccelerator(float target_size,
     nodesForRenderIndices[i] = finishInformation[i].node_for_render_index;
     parentIndices[i] = finishInformation[i].parent_index;
     renderIndices[i] = finishInformation[i].render_index;
+    TS[i] = finishInformation[i].weight;
+    Kids[i] = finishInformation[i].children_num;
   }
 
   recycle();
@@ -346,10 +354,9 @@ int main() {
                          0.00000000000000000000, 0.00000000000000000000,
                          -0.01000100001692771912, 0.00000000000000000000};
   int to_render = callAccelerator(target_size, viewpoint, globalRenderIndices, globalNodesForRenderIndices,
-                                  globalParentIndices, view_matrix, proj_matrix);
+                                  globalParentIndices, globalTS, globalKids, view_matrix, proj_matrix);
   freopen("log.txt", "w", stdout);
   std::cerr << to_render << std::endl;
-  std::sort(globalNodesForRenderIndices, globalNodesForRenderIndices + to_render);
   freopen("my_render_indices.txt", "w", stdout);
   for (int i = 0; i < to_render; ++i) {
     std::cout << globalRenderIndices[i] << '\n';
