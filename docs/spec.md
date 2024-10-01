@@ -6,7 +6,7 @@
 
 Nodes: depth, parent, subtree_size, $3\times 4$ bytes
 Boxes: $8\times 4$ bytes
-Subtasks: <leaf_node, leaf_task>, **size unclear!!**
+Subtasks: <leaf_node, begin_leaf_task, end_leaf_task>, thus the size is at most `PE_TASK_SIZE`$\times 8$ bytes
 Tasks: start_node, task_size, $2\times 4$ bytes
 
 Index: task_id, $4$ bytes
@@ -52,6 +52,14 @@ The scheduler has to the deal with the commit buffer in this way:
 ## 3. Discussion of details
 
 ### 3.1 How to decide whether our simulator has halted
+
+The simulator halts if and only when:
+
+- every PE doesn't have a task to work with
+- the scheduler have nothing to schedule
+- there's no entry busy/valid in DCache
+
+And it can be shown that none of the aforementioned conditions can be wiped out.
 
 
 
