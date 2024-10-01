@@ -12,3 +12,4 @@ Testing/
 dependencies/
 *.txt
 reorder.bin
+dist/
