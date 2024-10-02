@@ -5,12 +5,11 @@
 #include "DRAM.hpp"
 #include "types.hpp"
 
-constexpr int DCacheSize = TaskQueueSize + PENum;
-
 struct CacheData {
     Task task;
     Node node[MaxTaskSize]{};
-    Box box[MaxTaskSize];
+    Box box[MaxTaskSize]{};
+    // actually there should also store the size of each node, but we omit it here
 };
 
 struct Bank {
@@ -36,7 +35,7 @@ struct DCache {
     Bank banks[BankNum];
     BufferCache buffer_cache;
 
-    bool readData(int task_id, Task &task, std::vector<Node> &nodes, std::vector<Box> &boxes);
+    bool readData(int task_id, Task &task, std::vector<Node> &nodes, std::vector<Box> &boxes, Box &root_father_box);
     bool readSubtask(int task_id, std::vector<int> &leaves, std::vector<int> &leaf_task_ids);
     bool cacheLoadData(int task_id, const DRAM &dram);
     bool cachePrefillData(int task_id, const DRAM &dram);
@@ -47,6 +46,7 @@ struct DCache {
     void printStatus(std::ostream &os);
     bool isBusy();
     void recycle();
+    void writeBackSize(int task_id, int node_relevant_id, float size);
 };
 
 #endif // HGS_DCache_HPP_
