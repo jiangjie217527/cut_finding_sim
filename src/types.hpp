@@ -13,9 +13,9 @@ struct Node {
     int count_leaf = 0;
     int start = 0;
     int parent_start = 0;
+    bool is_task_leaf = false;
     float size = 0; // projected size, used for weight calculation
     int num_siblings = 0;
-    bool is_task_leaf = false;
 };
 
 struct HalfBox {
@@ -52,8 +52,6 @@ struct Task {
     friend std::ifstream &operator>>(std::ifstream &ifs, Task &task) {
       ifs.read(reinterpret_cast<char *>(&task.start_id), sizeof(task.start_id));
       ifs.read(reinterpret_cast<char *>(&task.task_size), sizeof(task.task_size));
-      ifs.read(reinterpret_cast<char *>(&task.root_father_box), sizeof(task.root_father_box));
-      ifs.read(reinterpret_cast<char *>(&task.root_father_children_num), sizeof(task.root_father_children_num));
 
       int leaves_size;
       ifs.read(reinterpret_cast<char *>(&leaves_size), sizeof(leaves_size));
@@ -66,6 +64,19 @@ struct Task {
       ifs.read(reinterpret_cast<char *>(task.leaf_task_ids.data()), leaf_task_ids_size * sizeof(int));
 
       return ifs;
+    }
+
+    friend void readExtraData(std::ifstream &ifs, Task &task) {
+      Point4 minn, maxx;
+
+      ifs.read(reinterpret_cast<char *>(&task.root_father_children_num), sizeof(task.root_father_children_num));
+      ifs.read(reinterpret_cast<char *>(&minn), sizeof(minn));
+      ifs.read(reinterpret_cast<char *>(&maxx), sizeof(maxx));
+
+      for (int i = 0; i < 4; i++) {
+        task.root_father_box.minn[i] = minn[i];
+        task.root_father_box.maxx[i] = maxx[i];
+      }
     }
 
 };

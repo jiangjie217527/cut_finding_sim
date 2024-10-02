@@ -5,8 +5,6 @@
 #include "DRAM.hpp"
 #include "types.hpp"
 
-constexpr int DCacheSize = TaskQueueSize + PENum;
-
 struct CacheData {
     Task task;
     Node node[MaxTaskSize]{};

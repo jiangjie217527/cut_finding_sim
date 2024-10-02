@@ -63,7 +63,7 @@ bool DCache::readSubtask(int task_id, std::vector<int> &leaves, std::vector<int>
       leaf_task_ids = banks[bank_id].data[i].task.leaf_task_ids;
 
       banks[bank_id].busy = true;
-      banks[bank_id].counter = divUpperBound((leaves.size() + leaf_task_ids.size()) * sizeof(int), CacheWordsPerCycle);
+      banks[bank_id].counter = divUpperBound(SizeOfSubtask, CacheWordsPerCycle);
       return true;
     }
   }

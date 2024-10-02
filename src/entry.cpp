@@ -49,7 +49,7 @@ void recycle() {
 void check(std::string truth_file, std::string my_file) {
 
   freopen(truth_file.c_str(), "r", stdin);
-  std::vector<int> truth;
+  std::vector<float> truth;
   while (true) {
     int x;
     if (scanf("%d", &x) == EOF) {
@@ -59,11 +59,11 @@ void check(std::string truth_file, std::string my_file) {
   }
 
   freopen(my_file.c_str(), "r", stdin);
-  std::vector<int> mine;
+  std::vector<float> mine;
 
   while (true) {
-    int x;
-    if (scanf("%d", &x) == EOF) {
+    float x;
+    if (scanf("%f", &x) == EOF) {
       break;
     }
     mine.push_back(x);
@@ -74,7 +74,7 @@ void check(std::string truth_file, std::string my_file) {
   std::sort(mine.begin(), mine.end());
 
   int overlap = 0;
-  std::unordered_set<int> truth_nodes;
+  std::unordered_set<float> truth_nodes;
 
   for (int i = 0; i < truth.size(); ++i) {
     truth_nodes.insert(truth[i]);
@@ -181,6 +181,10 @@ void initStage(float *viewpoint) {
     max_subtask_size = std::max(max_subtask_size, tasks[i].leaf_task_ids.size());
   }
 
+  for (int i = 0; i < tasks_size; ++i) {
+    readExtraData(infile, tasks[i]);
+  }
+
   std::cerr << "[critical]: max_subtask_size = " << max_subtask_size << "\n";
 
   size_t nodes_size;
@@ -188,12 +192,13 @@ void initStage(float *viewpoint) {
   nodes.resize(nodes_size);
   boxes.resize(nodes_size);
   for (int i = 0; i < nodes_size; ++i) {
-    int parent, subtree_size, count_leaf, start;
+    int parent, subtree_size, count_leaf, start, num_siblings;
     infile.read(reinterpret_cast<char *>(&parent), sizeof(parent));
     infile.read(reinterpret_cast<char *>(&subtree_size), sizeof(subtree_size));
     infile.read(reinterpret_cast<char *>(&count_leaf), sizeof(count_leaf));
     infile.read(reinterpret_cast<char *>(&start), sizeof(start));
-    nodes[i] = {parent, subtree_size, count_leaf, start, 0, false};
+    infile.read(reinterpret_cast<char *>(&num_siblings), sizeof(num_siblings));
+    nodes[i] = {parent, subtree_size, count_leaf, start, 0, false, 0, num_siblings};
 
     Point4 minn, maxx;
     infile.read(reinterpret_cast<char *>(&minn), sizeof(minn));
@@ -334,25 +339,17 @@ int callAccelerator(float target_size,
 }
 
 int main() {
-  float target_size = 0.022588656707277704;
-  float viewpoint[] = {-45.02200698852539062500, 63.64959716796875000000,
-                       8.60590744018554687500};
-  float view_matrix[] = {-2.00151070952415466309e-01, -4.04376387596130371094e-01,
-                         8.92423272132873535156e-01, 0.00000000000000000000e+00,
-                         -9.79656815528869628906e-01, 9.61357727646827697754e-02,
-                         -1.76154449582099914551e-01, 0.00000000000000000000e+00,
-                         -1.45611055195331573486e-02, -9.09526050090789794922e-01,
-                         -4.15391772985458374023e-01, 0.00000000000000000000e+00,
-                         5.34688682556152343750e+01, -1.64975414276123046875e+01,
-                         5.49656677246093750000e+01, 1.00000000000000000000e+00};
-  float proj_matrix[] = {0.95111346244812011719, 0.00000000000000000000,
-                         0.00000000000000000000, 0.00000000000000000000,
-                         0.00000000000000000000, 1.41185545921325683594,
-                         0.00000000000000000000, 0.00000000000000000000,
-                         0.00000000000000000000, 0.00000000000000000000,
-                         1.00010001659393310547, 1.00000000000000000000,
-                         0.00000000000000000000, 0.00000000000000000000,
-                         -0.01000100001692771912, 0.00000000000000000000};
+  float target_size = 0.015236032862841614;
+  float viewpoint[3] = {-1.1579, 19.6893, -2.9418};
+  float view_matrix[16] = {0.95878, 0.103756, -0.264529, 0.0,
+                           0.284113, -0.335135, 0.898312, 0.0,
+                           0.00455242, -0.93644, -0.350799, 0.0,
+                           -4.4704, 3.9639, -19.0254, 1.0};
+  float proj_matrix[16] = {1.00553, 0.0, 0.0, 0.0,
+                           0.0, 1.33695, 0.0, 0.0,
+                           0.0, 0.0, 1.0001, 1.0,
+                           0.0, 0.0, -0.010001, 0.0};
+
   int to_render = callAccelerator(target_size, viewpoint, globalRenderIndices, globalNodesForRenderIndices,
                                   globalParentIndices, globalTS, globalKids, view_matrix, proj_matrix);
   freopen("log.txt", "w", stdout);
@@ -370,6 +367,16 @@ int main() {
   freopen("my_parents.txt", "w", stdout);
   for (int i = 0; i < to_render; ++i) {
     std::cout << globalParentIndices[i] << '\n';
+  }
+
+  freopen("my_interpolation_weights.txt", "w", stdout);
+  for (int i = 0; i < to_render; ++i) {
+    std::cout << globalTS[i] << '\n';
+  }
+
+  freopen("my_num_siblings.txt", "w", stdout);
+  for (int i = 0; i < to_render; ++i) {
+    std::cout << globalKids[i] << '\n';
   }
 
   check("./render_indices.txt", "my_render_indices.txt");
