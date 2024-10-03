@@ -314,6 +314,11 @@ int callAccelerator(float target_size,
     parentIndices[i] = parent_indices[i];
     TS[i] = ts[i];
     Kids[i] = kids[i];
+
+    if (i < 25) {
+      std::cerr << "ts[" << i << "] = " << TS[i] << std::endl;
+      std::cerr << "kids[" << i << "] = " << Kids[i] << std::endl;
+    }
   }
 
   std::cerr << "total cycles: " << cycle << std::endl;
@@ -323,15 +328,15 @@ int callAccelerator(float target_size,
     finishInformation[i] = {nodesForRenderIndices[i], parent_indices[i], render_indices[i], ts[i], kids[i]};
   }
 
-  std::sort(finishInformation, finishInformation + nodes_for_render_indices.size());
+  // std::sort(finishInformation, finishInformation + nodes_for_render_indices.size());
 
-  for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
-    nodesForRenderIndices[i] = finishInformation[i].node_for_render_index;
-    parentIndices[i] = finishInformation[i].parent_index;
-    renderIndices[i] = finishInformation[i].render_index;
-    TS[i] = finishInformation[i].weight;
-    Kids[i] = finishInformation[i].children_num;
-  }
+  // for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
+  //   nodesForRenderIndices[i] = finishInformation[i].node_for_render_index;
+  //   parentIndices[i] = finishInformation[i].parent_index;
+  //   renderIndices[i] = finishInformation[i].render_index;
+  //   TS[i] = finishInformation[i].weight;
+  //   Kids[i] = finishInformation[i].children_num;
+  // }
 
   recycle();
 
