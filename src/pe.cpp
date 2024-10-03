@@ -82,7 +82,7 @@ bool InnerTask::updateTick(std::queue<int> &task_queue, DCache &dcache, Schedule
         int parent_id = nodes[id].parent_id - cur_task.start_id;
         float weight;
         Box parent_box = parent_id >= 0 ? boxes[parent_id] : root_father_box;
-        int num_kids = parent_id >= 0 ? nodes[parent_id].num_siblings : cur_task.root_father_children_num;
+        int num_kids = parent_id >= 0 ? nodes[id].num_siblings : cur_task.root_father_children_num;
         float parent_size = computeSize(parent_box, viewpoint);
         if (parent_size > 2.0f * this->parent_pe->target_size) {
           weight = 1.0f;
