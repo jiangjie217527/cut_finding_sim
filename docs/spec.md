@@ -1,17 +1,19 @@
 # Specification
 
+author: Xingyang Li
+
+----
+
 ## 1. Data Cache
 
 #### 1.1 Datatype and respective members, types
 
-Nodes: depth, parent, subtree_size, $3\times 4$ bytes
-Boxes: $8\times 4$ bytes
-Subtasks: <leaf_node, begin_leaf_task, end_leaf_task>, thus the size is at most `PE_TASK_SIZE`$\times 8$ bytes
-Tasks: start_node, task_size, $2\times 4$ bytes
+- Nodes: depth, subtree_size, start, parent_start, size, siblings, parent_id, count_leaf $7\times 4+1=29$ bytes
+- Boxes: $8\times 4$ bytes
+- Subtasks: <leaf_node, begin_leaf_task, end_leaf_task>, thus the size is at most `PE_TASK_SIZE`$\times 8 = 256$ bytes
+- Tasks: start_node, task_size, $2\times 4$ bytes
 
-Index: task_id, $4$ bytes
-
-#### 1.2 
+So an entry in the Data Cache costs: $2216$ bytes.
 
 ## 2. Control Flow of Accelerator
 
@@ -31,13 +33,14 @@ Index: task_id, $4$ bytes
     - compare size with `target_size`
         - if **bigger and not the leaf of the hierarchy**: `cur_id += cur_node.subtree_size`, if this is a **leaf node of the subtree** (`subtree_size == 1`), append `cur_id` to the array of **selected leaves**
         - if **smaller or the leaf of the hierarchy**: `cur_id += 1`, append `cur_id` to the result array of **selected cut**
-5. after the loop, write the finished `task_id` to the commit buffer
+    - calculate interpolation weights and update siblings if this node is selected as a cut
+5. After the loop, write the finished `task_id` to the commit buffer; In the meantime, send a signal to the scheduler to notify that after finding subtasks corresponding to the last leaf, we can invalidate the respective cache entry of such `task_id`.
 
-The full process of dealing a node consists of about 12 cycles, and can be divided to **no less than 10** stages of pipelining.
+The full process of dealing a node consists of about $12+6$ cycles, and can be divided to **18** stages of pipelining as there isn't any data dependency.
 
 ### 2.3 Commit Buffer
 
-commit buffer contains one array filled with the pair `<task_id, leaf_node>`; and another containing the currently done tasks
+commit buffer contains one array filled with the pair `<task_id, leaf_node>`, another containing the currently done tasks, the other containing the fetched new `task_id` array.
 
 ### 2.4 Scheduler
 
@@ -61,5 +64,48 @@ The simulator halts if and only when:
 
 And it can be shown that none of the aforementioned conditions can be wiped out.
 
+### 3.2 Buffer Cache of our DCache
 
+We use a buffer to serve as an additional storage for upcoming tasks, so that they don't need to wait until there bank has a vacancy, and it successfully handles the case where the remainder after `BankNum` **is biased**.
 
+#### 4. Configurations and Memory Footprint
+
+The `common.hpp` is listed as follows.
+
+```c++
+#ifndef HGS_COMMON_HPP_
+#define HGS_COMMON_HPP_
+
+#include <cassert>
+#include <iostream>
+
+#include "half.hpp"
+#include "types.hpp"
+
+constexpr int PipelineStage = 18;
+constexpr int CutSelectStage = 12;
+constexpr int WeightCalcStage = PipelineStage - CutSelectStage;
+constexpr int DRAMWordsPerCycle = 4;
+constexpr int TaskQueueSize = 12;
+constexpr int PENum = 4;
+
+// for DCache
+constexpr int BankNum = 8;
+constexpr int BankSize = 4 * (TaskQueueSize + PENum) / BankNum;
+constexpr int PortWordsPerCycle = 4;
+constexpr int PortNum = 4;
+constexpr int CacheWordsPerCycle = PortWordsPerCycle * PortNum;
+constexpr int BufferCacheSize = 8;
+// for Task
+constexpr int MaxTaskSize = 32;
+constexpr int MaxSubtaskSize = 32;
+constexpr int SizeOfTask = sizeof(int) + sizeof(int) + sizeof(Box) + sizeof(int);
+constexpr int SizeofBox = sizeof(Point4) + sizeof(Point4);
+constexpr int SizeOfNode = sizeof(int) + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(float) + sizeof(int) + sizeof(bool);
+constexpr int SizeOfSubtask = MaxSubtaskSize * (sizeof(int) + sizeof(int) + sizeof(int));
+constexpr int SizeOfCacheData = SizeOfTask + SizeOfSubtask + MaxTaskSize * SizeOfNode + MaxTaskSize * SizeofBox;
+// for Scheduler
+constexpr int MaxLeafBufferSize = 32;
+#endif // HGS_COMMON_HPP_
+```
+So the size of our DataCache is $160$ KB.
