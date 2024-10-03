@@ -216,9 +216,6 @@ void initStage(float *viewpoint) {
 
   infile.close();
 
-//  checkOverlap();
-//  std::cerr << "[INFO]: pass checkOverlap\n";
-
   for (int i = 0; i < tasks_size; ++i) {
     Task &task = tasks[i];
     for (int j = 0; j < task.leaves.size(); ++j) {
@@ -256,6 +253,14 @@ int callAccelerator(float target_size,
           PE(render_indices, nodes_for_render_indices, parent_indices, ts, kids),
           PE(render_indices, nodes_for_render_indices, parent_indices, ts, kids),
   };
+
+  double occupy_rate[PENum][PipelineStage];
+  for (int i = 0; i < PENum; ++i) {
+    for (int j = 0; j < PipelineStage; ++j) {
+      occupy_rate[i][j] = 0;
+    }
+  }
+
   for (int i = 0; i < PENum; ++i) {
     pes[i].loadMeta(target_size, viewpoint, view_matrix, proj_matrix);
   }
@@ -287,6 +292,10 @@ int callAccelerator(float target_size,
 
     for (int i = 0; i < PENum; ++i) {
       working |= pes[i].isBusy();
+
+      for (int j = 0; j < PipelineStage; ++j) {
+        occupy_rate[i][j] += pes[i].inner_tasks[j].isBusy();
+      }
     }
 
     working |= scheduler.isBusy();
@@ -314,29 +323,20 @@ int callAccelerator(float target_size,
     parentIndices[i] = parent_indices[i];
     TS[i] = ts[i];
     Kids[i] = kids[i];
-
-    if (i < 25) {
-      std::cerr << "ts[" << i << "] = " << TS[i] << std::endl;
-      std::cerr << "kids[" << i << "] = " << Kids[i] << std::endl;
-    }
   }
 
   std::cerr << "total cycles: " << cycle << std::endl;
+
+  for (int i = 0; i < PENum; ++i) {
+    for (int j = 0; j < PipelineStage; ++j) {
+      std::cerr << "PE[" << i << "][" << j << "] = " << occupy_rate[i][j] * 1.0 / cycle << "\n";
+    }
+  }
 
   for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
     nodesForRenderIndices[i] = reversed_indices[nodesForRenderIndices[i]];
     finishInformation[i] = {nodesForRenderIndices[i], parent_indices[i], render_indices[i], ts[i], kids[i]};
   }
-
-  // std::sort(finishInformation, finishInformation + nodes_for_render_indices.size());
-
-  // for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
-  //   nodesForRenderIndices[i] = finishInformation[i].node_for_render_index;
-  //   parentIndices[i] = finishInformation[i].parent_index;
-  //   renderIndices[i] = finishInformation[i].render_index;
-  //   TS[i] = finishInformation[i].weight;
-  //   Kids[i] = finishInformation[i].children_num;
-  // }
 
   recycle();
 

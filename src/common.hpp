@@ -16,11 +16,11 @@ constexpr int PENum = 4;
 
 // for DCache
 constexpr int BankNum = 4;
-constexpr int BankSize = 4 * (TaskQueueSize + PENum) / BankNum;
+constexpr int BankSize = 8 * (TaskQueueSize + PENum) / BankNum;
 constexpr int PortWordsPerCycle = 4;
 constexpr int PortNum = 4;
 constexpr int CacheWordsPerCycle = PortWordsPerCycle * PortNum;
-constexpr int BufferCacheSize = 4;
+constexpr int BufferCacheSize = 8;
 // for Task
 constexpr int MaxTaskSize = 32;
 constexpr int MaxSubtaskSize = 32;
