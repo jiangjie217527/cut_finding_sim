@@ -11,7 +11,7 @@
 
 void initStage();
 
-int callAccelerator(float target_size,
+std::pair<int, int> callAccelerator(float target_size,
                     float *viewpoint,
                     int *renderIndices,
                     int *nodesForRenderIndices,

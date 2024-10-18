@@ -1,7 +1,7 @@
 #include "torch_interface.h"
 #include "../src/entry.hpp"
 
-int MyExpandToSizeAndCalcWeight(
+std::pair<int, int> MyExpandToSizeAndCalcWeight(
         float target_size,
         torch::Tensor &viewpoint,
         torch::Tensor &render_indices,
