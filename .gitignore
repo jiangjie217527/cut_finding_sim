@@ -13,3 +13,6 @@ dependencies/
 *.txt
 reorder.bin
 dist/
+test_on_cuda/gcc
+test_on_cuda/*.o
+test_on_cuda/main

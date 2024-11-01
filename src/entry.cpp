@@ -230,7 +230,7 @@ void initStage(float *viewpoint) {
   dram.init(nodes, tasks, boxes);
 }
 
-int callAccelerator(float target_size,
+std::pair<int, int> callAccelerator(float target_size,
                     float *viewpoint,
                     int *renderIndices,
                     int *nodesForRenderIndices,
@@ -294,7 +294,7 @@ int callAccelerator(float target_size,
       working |= pes[i].isBusy();
 
       for (int j = 0; j < PipelineStage; ++j) {
-        occupy_rate[i][j] += pes[i].inner_tasks[j].isBusy();
+        occupy_rate[i][j] += pes[i].inner_tasks[j].busy;
       }
     }
 
@@ -327,10 +327,14 @@ int callAccelerator(float target_size,
 
   std::cerr << "total cycles: " << cycle << std::endl;
 
+  std::cerr << "occupy rate: \n";
   for (int i = 0; i < PENum; ++i) {
+    std::cerr << "PE " << i << ": \n";
     for (int j = 0; j < PipelineStage; ++j) {
-      std::cerr << "PE[" << i << "][" << j << "] = " << occupy_rate[i][j] * 1.0 / cycle << "\n";
+      std::cerr << occupy_rate[i][j] * 1.0 / cycle << ", ";
     }
+
+    std::cerr << "\n";
   }
 
   for (int i = 0; i < nodes_for_render_indices.size(); ++i) {
@@ -340,7 +344,7 @@ int callAccelerator(float target_size,
 
   recycle();
 
-  return nodes_for_render_indices.size();
+  return {nodes_for_render_indices.size(), cycle};
 }
 
 int main() {
@@ -355,8 +359,9 @@ int main() {
                            0.0, 0.0, 1.0001, 1.0,
                            0.0, 0.0, -0.010001, 0.0};
 
-  int to_render = callAccelerator(target_size, viewpoint, globalRenderIndices, globalNodesForRenderIndices,
+  std::pair<int, int> res = callAccelerator(target_size, viewpoint, globalRenderIndices, globalNodesForRenderIndices,
                                   globalParentIndices, globalTS, globalKids, view_matrix, proj_matrix);
+  int to_render = res.first, cycles = res.second;
   freopen("log.txt", "w", stdout);
   std::cerr << to_render << std::endl;
   freopen("my_render_indices.txt", "w", stdout);

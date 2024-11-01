@@ -10,6 +10,7 @@ In order to view the design document, please refer to [this](./docs/spec.md).
 
 - [x] basic simulator code
 - [x] incorporation into HGS code
-- [ ] updating structure figure
-- [ ] debugging
-- [ ] incorporation of weight-calculation process
+- [x] updating structure figure
+- [x] debugging
+- [x] incorporation of weight-calculation process
+- [x] add cycle count for return value

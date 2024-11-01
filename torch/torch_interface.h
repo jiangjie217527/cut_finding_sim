@@ -5,7 +5,7 @@
 #include <tuple>
 #include <string>
 
-int MyExpandToSizeAndCalcWeight(
+std::pair<int, int> MyExpandToSizeAndCalcWeight(
         float target_size,
         torch::Tensor &viewpoint,
         torch::Tensor &render_indices,
